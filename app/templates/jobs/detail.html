@@ -1,0 +1,159 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ job.title }} - {{ job.organization.name if job.organization else 'RecruitFlow AI' }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4">
+    <!-- Main Job Overview -->
+    <div class="col-lg-8">
+      <div class="card-enterprise p-4 p-md-5 mb-4">
+        <!-- Title and Metadata -->
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <div class="text-primary fw-semibold small mb-1">
+              <i class="bi bi-building me-1"></i>{{ job.organization.name if job.organization else 'RecruitFlow Enterprise' }}
+            </div>
+            <h2 class="fw-bold mb-2">{{ job.title }}</h2>
+            <div class="d-flex flex-wrap gap-2 text-muted small">
+              <span><i class="bi bi-geo-alt me-1"></i>{{ job.location or 'Multiple Locations' }}</span>
+              <span>&bull;</span>
+              <span><i class="bi bi-laptop me-1"></i>{{ job.workplace_type|capitalize }}</span>
+              <span>&bull;</span>
+              <span><i class="bi bi-briefcase me-1"></i>{{ job.employment_type|capitalize }}</span>
+              {% if job.department %}
+                <span>&bull;</span>
+                <span><i class="bi bi-diagram-2 me-1"></i>{{ job.department }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <span class="badge-status {{ job.status }} fs-6">{{ job.status|capitalize }}</span>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Role Overview -->
+        <h5 class="fw-bold mb-3">Role Overview &amp; Description</h5>
+        <div class="text-secondary mb-4" style="white-space: pre-line; line-height: 1.7;">
+          {{ job.description }}
+        </div>
+
+        {% if job.responsibilities %}
+          <h5 class="fw-bold mb-3">Key Responsibilities</h5>
+          <div class="text-secondary mb-4" style="white-space: pre-line; line-height: 1.7;">
+            {{ job.responsibilities }}
+          </div>
+        {% endif %}
+
+        <!-- Required Skills -->
+        <h5 class="fw-bold mb-3">Required Skillsets</h5>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          {% for skill in job.required_skills.split(',') %}
+            <span class="badge bg-primary-subtle text-primary border px-3 py-2 fs-6">{{ skill.strip() }}</span>
+          {% endfor %}
+        </div>
+
+        {% if job.preferred_skills %}
+          <h6 class="fw-bold mb-2 text-muted">Preferred / Bonus Qualifications</h6>
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            {% for skill in job.preferred_skills.split(',') %}
+              <span class="badge bg-light text-secondary border px-3 py-2">{{ skill.strip() }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- Recruiter Action Bar if Authorized -->
+        {% if is_author_or_org_member %}
+          <div class="mt-4 pt-3 border-top bg-light p-3 rounded-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <span class="small fw-semibold text-secondary"><i class="bi bi-shield-lock me-1"></i>Recruiter Controls</span>
+              <div class="d-flex gap-2">
+                <a href="{{ url_for('jobs.edit', job_id=job.id) }}" class="btn btn-sm btn-outline-enterprise">
+                  <i class="bi bi-pencil me-1"></i> Edit Opening
+                </a>
+                <a href="{{ url_for('applications.index', job_id=job.id) }}" class="btn btn-sm btn-primary-enterprise">
+                  <i class="bi bi-people me-1"></i> View Applications ({{ job.applications.count() }})
+                </a>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right Sidebar Requisition Card -->
+    <div class="col-lg-4">
+      <div class="card-enterprise p-4 sticky-top" style="top: 85px;">
+        <h5 class="fw-bold mb-3">Requisition Summary</h5>
+        
+        <div class="d-flex justify-content-between py-2 border-bottom small">
+          <span class="text-muted">Experience Level</span>
+          <span class="fw-semibold">{{ job.minimum_experience_years }} - {{ job.maximum_experience_years or '+' }} years</span>
+        </div>
+
+        {% if job.minimum_qualification %}
+          <div class="d-flex justify-content-between py-2 border-bottom small">
+            <span class="text-muted">Education / Degree</span>
+            <span class="fw-semibold">{{ job.minimum_qualification }}</span>
+          </div>
+        {% endif %}
+
+        {% if job.salary_range %}
+          <div class="d-flex justify-content-between py-2 border-bottom small">
+            <span class="text-muted">Target Compensation</span>
+            <span class="fw-semibold text-success">{{ job.salary_range }}</span>
+          </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between py-2 border-bottom small">
+          <span class="text-muted">Date Posted</span>
+          <span class="fw-semibold">{{ job.created_at.strftime('%B %d, %Y') }}</span>
+        </div>
+
+        {% if job.application_deadline %}
+          <div class="d-flex justify-content-between py-2 border-bottom small">
+            <span class="text-muted">Application Deadline</span>
+            <span class="fw-semibold text-danger">{{ job.application_deadline.strftime('%B %d, %Y %H:%M') }}</span>
+          </div>
+        {% endif %}
+
+        <!-- Apply Button / Status Actions -->
+        <div class="mt-4">
+          {% if can_edit %}
+            <a href="{{ url_for('matching.job_rankings', job_id=job.id) }}" class="btn btn-primary-enterprise w-100 py-2 mb-2">
+              <i class="bi bi-bar-chart-steps me-1"></i> View Candidate Rankings
+            </a>
+          {% endif %}
+          {% if current_user.is_authenticated and current_user.role == 'candidate' %}
+            {% if existing_application %}
+              <div class="alert alert-info small mb-3">
+                <i class="bi bi-check-circle me-1"></i> You applied on {{ existing_application.applied_at.strftime('%Y-%m-%d') }}.
+                <div class="mt-1">Status: <strong>{{ existing_application.status|capitalize }}</strong></div>
+              </div>
+              <a href="{{ url_for('applications.detail', application_id=existing_application.id) }}" class="btn btn-outline-enterprise w-100">
+                View My Application
+              </a>
+            {% elif job.is_open %}
+              <a href="{{ url_for('applications.apply', job_id=job.id) }}" class="btn btn-primary-enterprise w-100 py-2">
+                <i class="bi bi-send me-1"></i> Apply for this Position
+              </a>
+            {% else %}
+              <button class="btn btn-secondary w-100" disabled>Position Closed</button>
+            {% endif %}
+          {% elif not current_user.is_authenticated %}
+            <a href="{{ url_for('auth.login', next=request.path) }}" class="btn btn-primary-enterprise w-100 py-2">
+              Sign In to Apply
+            </a>
+          {% endif %}
+
+          <a href="{{ url_for('jobs.index') }}" class="btn btn-outline-enterprise w-100 mt-2">
+            Back to All Jobs
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

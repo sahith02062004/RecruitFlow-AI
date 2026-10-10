@@ -1,0 +1,82 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Account Settings - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+          <h3 class="fw-bold mb-1">Account Settings</h3>
+          <p class="text-muted small mb-0">Manage your profile credentials and security preferences.</p>
+        </div>
+        <span class="badge bg-primary-subtle text-primary">{{ current_user.role|capitalize }}</span>
+      </div>
+
+      <!-- Account Info Form -->
+      <div class="card-enterprise p-4 mb-4">
+        <h5 class="fw-semibold mb-3">General Information</h5>
+        <form method="POST" action="{{ url_for('auth.settings') }}" novalidate>
+          {{ account_form.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ account_form.full_name.label(class="form-label fw-semibold small") }}
+            {{ account_form.full_name(class="form-control" + (" is-invalid" if account_form.full_name.errors else "")) }}
+            {% for error in account_form.full_name.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Email Address</label>
+            <input type="email" class="form-control" value="{{ current_user.email }}" disabled>
+            <div class="form-text small text-muted">Primary account email cannot be edited directly.</div>
+          </div>
+
+          <button type="submit" name="{{ account_form.submit.name }}" class="btn btn-primary-enterprise">
+            Save Changes
+          </button>
+        </form>
+      </div>
+
+      <!-- Change Password Form -->
+      <div class="card-enterprise p-4">
+        <h5 class="fw-semibold mb-3">Change Password</h5>
+        <form method="POST" action="{{ url_for('auth.settings') }}" novalidate>
+          {{ password_form.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ password_form.current_password.label(class="form-label fw-semibold small") }}
+            {{ password_form.current_password(class="form-control" + (" is-invalid" if password_form.current_password.errors else "")) }}
+            {% for error in password_form.current_password.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="row g-2 mb-4">
+            <div class="col-md-6">
+              {{ password_form.new_password.label(class="form-label fw-semibold small") }}
+              {{ password_form.new_password(class="form-control" + (" is-invalid" if password_form.new_password.errors else "")) }}
+              {% for error in password_form.new_password.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              {{ password_form.confirm_new_password.label(class="form-label fw-semibold small") }}
+              {{ password_form.confirm_new_password(class="form-control" + (" is-invalid" if password_form.confirm_new_password.errors else "")) }}
+              {% for error in password_form.confirm_new_password.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <button type="submit" name="{{ password_form.submit.name }}" class="btn btn-outline-enterprise">
+            Update Password
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

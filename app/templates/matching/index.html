@@ -1,0 +1,108 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}Candidate Matching &amp; Ranking - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom gap-2">
+    <div>
+      <h3 class="fw-bold mb-1">Explainable Candidate Matching &amp; Ranking</h3>
+      <p class="text-muted small mb-0">Deterministic, evidence-based candidate scoring against stated job requirements.</p>
+    </div>
+    <div>
+      <a href="{{ url_for('jobs.create') }}" class="btn btn-outline-enterprise">
+        <i class="bi bi-plus-lg me-1"></i> Post New Job
+      </a>
+    </div>
+  </div>
+
+  <div class="card-enterprise">
+    <div class="card-header-clean d-flex justify-content-between align-items-center">
+      <h6 class="fw-semibold mb-0">Organization Job Requisitions</h6>
+      <span class="badge bg-light text-dark border">{{ job_summaries|length }} Requisitions</span>
+    </div>
+    {% if job_summaries %}
+      <div class="table-responsive">
+        <table class="table table-enterprise align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Job Requisition</th>
+              <th>Status</th>
+              <th>Required Skills</th>
+              <th>Min Experience</th>
+              <th>Applicants</th>
+              <th>Top Match Score</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in job_summaries %}
+            {% set job = s.job %}
+            <tr>
+              <td>
+                <div class="fw-bold text-dark">{{ job.title }}</div>
+                <div class="text-muted small">
+                  {{ job.department or 'General' }} &bull; {{ job.location or 'Remote' }}
+                </div>
+              </td>
+              <td>
+                {% if job.status in ('published', 'active') %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">Active</span>
+                {% elif job.status == 'draft' %}
+                  <span class="badge bg-secondary-subtle text-secondary border">Draft</span>
+                {% else %}
+                  <span class="badge bg-light text-dark border">{{ job.status|capitalize }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="text-truncate" style="max-width: 260px;" title="{{ job.required_skills }}">
+                  {{ job.required_skills }}
+                </div>
+              </td>
+              <td>{{ job.minimum_experience_years }} yrs</td>
+              <td>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                  {{ s.total_apps }} candidates
+                </span>
+                <span class="text-muted small d-block">{{ s.scored_apps }} evaluated</span>
+              </td>
+              <td>
+                {% if s.top_score is not none %}
+                  <span class="fw-bold fs-6 text-primary">{{ s.top_score }}%</span>
+                {% else %}
+                  <span class="text-muted small fst-italic">Pending</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{{ url_for('matching.job_rankings', job_id=job.id) }}" class="btn btn-primary-enterprise">
+                    <i class="bi bi-bar-chart-steps me-1"></i> View Rankings
+                  </a>
+                  <form method="POST" action="{{ url_for('matching.run_job_matching', job_id=job.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-secondary" title="Run Matching Evaluation">
+                      <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-5 text-center">
+        {{ empty.render_empty_state(
+          icon='bi-stars',
+          title='No active job requisitions available',
+          description='Create and publish a job requisition to initiate automated candidate evaluation, scoring, and ranking.',
+          action_url=url_for('jobs.create'),
+          action_text='Create Job Opening'
+        ) }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

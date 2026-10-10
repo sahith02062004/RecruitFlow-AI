@@ -1,0 +1,344 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Match Explanation - {{ application.candidate_user.full_name }} - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <!-- Top Navigation Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom gap-3">
+    <div class="d-flex align-items-center">
+      <a href="{{ url_for('matching.job_rankings', job_id=job.id) }}" class="btn btn-sm btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <h4 class="fw-bold mb-0">Match Explanation: {{ application.candidate_user.full_name }}</h4>
+          {% if is_stale %}
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+              <i class="bi bi-exclamation-triangle me-1"></i>Stale Score
+            </span>
+          {% elif match_result.status == 'current' %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">
+              <i class="bi bi-check-circle me-1"></i>Verified Current
+            </span>
+          {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border">{{ match_result.status|capitalize }}</span>
+          {% endif %}
+        </div>
+        <p class="text-muted small mb-0">
+          Requisition: <a href="{{ url_for('jobs.detail', job_id=job.id) }}" class="fw-semibold text-decoration-none">{{ job.title }}</a>
+          &bull; Evaluated {{ match_result.calculated_at.strftime('%b %d, %Y at %H:%M UTC') }} (Algorithm v{{ match_result.scoring_version }})
+        </p>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <form method="POST" action="{{ url_for('matching.recalculate', application_id=application.id) }}" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-enterprise">
+          <i class="bi bi-arrow-clockwise me-1"></i> Recalculate Score
+        </button>
+      </form>
+      <a href="{{ url_for('applications.detail', application_id=application.id) }}" class="btn btn-primary-enterprise">
+        <i class="bi bi-person-badge me-1"></i> Review Full Application
+      </a>
+    </div>
+  </div>
+
+  <!-- Stale Alert -->
+  {% if is_stale %}
+    <div class="alert alert-warning border-warning-subtle d-flex align-items-center mb-4 p-3 rounded-3" role="alert">
+      <i class="bi bi-exclamation-triangle-fill fs-5 text-warning me-3"></i>
+      <div class="flex-grow-1 small">
+        <strong>Re-evaluation Recommended:</strong> Job requirements or candidate resume data have been modified since this score was last computed.
+      </div>
+      <form method="POST" action="{{ url_for('matching.recalculate', application_id=application.id) }}" class="d-inline ms-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-warning">Update Now</button>
+      </form>
+    </div>
+  {% endif %}
+
+  <!-- Overall Match Metric Card -->
+  <div class="card-enterprise p-4 mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-md-4 text-center border-end-md">
+        <div class="text-muted small fw-semibold mb-1">OVERALL MATCH SCORE</div>
+        {% if match_result.overall_score is not none %}
+          <div class="display-4 fw-bold {% if match_result.overall_score >= 80 %}text-success{% elif match_result.overall_score >= 60 %}text-primary{% elif match_result.overall_score >= 40 %}text-warning{% else %}text-danger{% endif %}">
+            {{ match_result.overall_score }}<span class="fs-4">%</span>
+          </div>
+          <div class="badge bg-light text-secondary border mt-1">
+            Algorithm Version {{ match_result.scoring_version }}
+          </div>
+        {% else %}
+          <div class="fs-3 fw-bold text-muted mb-1">Unavailable</div>
+          <p class="text-muted small mb-0">Insufficient evidence in candidate resume</p>
+        {% endif %}
+      </div>
+
+      <div class="col-md-8">
+        <h6 class="fw-bold mb-2">Transparent Calculation Formula</h6>
+        <p class="text-muted small mb-3">
+          The overall score represents a normalized weighted sum of applicable requirement categories that contain verifiable candidate evidence.
+          Categories without stated job requirements are dynamically redistributed without penalty.
+        </p>
+        <div class="row g-2 text-center small">
+          <div class="col-6 col-sm-3">
+            <div class="p-2 border rounded bg-light">
+              <span class="text-muted d-block">Required Skills</span>
+              <span class="fw-bold fs-6">{{ (weights_snapshot.get('required_skills', 0.5) * 100)|round(0) }}% weight</span>
+            </div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <div class="p-2 border rounded bg-light">
+              <span class="text-muted d-block">Preferred Skills</span>
+              <span class="fw-bold fs-6">{{ (weights_snapshot.get('preferred_skills', 0.2) * 100)|round(0) }}% weight</span>
+            </div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <div class="p-2 border rounded bg-light">
+              <span class="text-muted d-block">Experience</span>
+              <span class="fw-bold fs-6">{{ (weights_snapshot.get('experience', 0.2) * 100)|round(0) }}% weight</span>
+            </div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <div class="p-2 border rounded bg-light">
+              <span class="text-muted d-block">Qualification</span>
+              <span class="fw-bold fs-6">{{ (weights_snapshot.get('qualification', 0.1) * 100)|round(0) }}% weight</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 d-flex align-items-center gap-2">
+          <span class="text-muted small fw-semibold">Evidence Coverage:</span>
+          <div class="progress flex-grow-1" style="height: 8px;">
+            <div class="progress-bar {% if match_result.evidence_coverage >= 80 %}bg-success{% elif match_result.evidence_coverage >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
+                 style="width: {{ match_result.evidence_coverage }}%;"></div>
+          </div>
+          <span class="fw-bold small">{{ match_result.evidence_coverage }}% Complete</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Category Breakdown Grid -->
+  <div class="row g-4 mb-4">
+    <!-- Category 1: Required Skills -->
+    {% set req_cat = category_scores.get('required_skills', {}) %}
+    <div class="col-md-6">
+      <div class="card-enterprise p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-check2-square text-primary fs-5 me-2"></i>
+            <h6 class="fw-bold mb-0">Required Skills (50%)</h6>
+          </div>
+          {% if req_cat.get('score') is not none %}
+            <span class="badge bg-primary-subtle text-primary fs-6">{{ req_cat.score }}%</span>
+          {% else %}
+            <span class="badge bg-secondary-subtle text-secondary">N/A</span>
+          {% endif %}
+        </div>
+
+        <p class="text-muted small mb-3">{{ req_cat.get('explanation') }}</p>
+
+        <!-- Matched Skills -->
+        {% set matched_req = match_result.get_matched_required_skills() %}
+        <div class="mb-3">
+          <span class="fw-semibold small text-success d-block mb-1">
+            <i class="bi bi-check-circle me-1"></i>Matched Skills ({{ matched_req|length }})
+          </span>
+          <div class="d-flex flex-wrap gap-1">
+            {% for s in matched_req %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">{{ s }}</span>
+            {% else %}
+              <span class="text-muted small fst-italic">None matched</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Missing Skills -->
+        {% set missing_req = match_result.get_missing_required_skills() %}
+        <div>
+          <span class="fw-semibold small text-danger d-block mb-1">
+            <i class="bi bi-x-circle me-1"></i>Missing Required Skills ({{ missing_req|length }})
+          </span>
+          <div class="d-flex flex-wrap gap-1">
+            {% for s in missing_req %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ s }}</span>
+            {% else %}
+              <span class="text-muted small fst-italic">All required skills present!</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category 2: Preferred Skills -->
+    {% set pref_cat = category_scores.get('preferred_skills', {}) %}
+    <div class="col-md-6">
+      <div class="card-enterprise p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-star text-primary fs-5 me-2"></i>
+            <h6 class="fw-bold mb-0">Preferred Skills (20%)</h6>
+          </div>
+          {% if pref_cat.get('score') is not none %}
+            <span class="badge bg-primary-subtle text-primary fs-6">{{ pref_cat.score }}%</span>
+          {% else %}
+            <span class="badge bg-secondary-subtle text-secondary">N/A</span>
+          {% endif %}
+        </div>
+
+        <p class="text-muted small mb-3">{{ pref_cat.get('explanation') }}</p>
+
+        <!-- Matched Preferred -->
+        {% set matched_pref = match_result.get_matched_preferred_skills() %}
+        <div class="mb-3">
+          <span class="fw-semibold small text-success d-block mb-1">
+            <i class="bi bi-check-circle me-1"></i>Matched Preferred ({{ matched_pref|length }})
+          </span>
+          <div class="d-flex flex-wrap gap-1">
+            {% for s in matched_pref %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">{{ s }}</span>
+            {% else %}
+              <span class="text-muted small fst-italic">None</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Missing Preferred -->
+        {% set missing_pref = match_result.get_missing_preferred_skills() %}
+        <div>
+          <span class="fw-semibold small text-secondary d-block mb-1">
+            <i class="bi bi-dash-circle me-1"></i>Unmatched Preferred ({{ missing_pref|length }})
+          </span>
+          <div class="d-flex flex-wrap gap-1">
+            {% for s in missing_pref %}
+              <span class="badge bg-light text-secondary border">{{ s }}</span>
+            {% else %}
+              <span class="text-muted small fst-italic">None</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category 3: Work Experience Alignment -->
+    {% set exp_cat = category_scores.get('experience', {}) %}
+    <div class="col-md-6">
+      <div class="card-enterprise p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-briefcase text-primary fs-5 me-2"></i>
+            <h6 class="fw-bold mb-0">Work Experience (20%)</h6>
+          </div>
+          {% if exp_cat.get('score') is not none %}
+            <span class="badge bg-primary-subtle text-primary fs-6">{{ exp_cat.score }}%</span>
+          {% else %}
+            <span class="badge bg-secondary-subtle text-secondary">Unavailable</span>
+          {% endif %}
+        </div>
+
+        <p class="text-secondary small mb-3">{{ exp_cat.get('explanation') }}</p>
+
+        <div class="row g-2 small">
+          <div class="col-6">
+            <div class="p-2 border rounded bg-white">
+              <span class="text-muted d-block">Role Minimum</span>
+              <span class="fw-bold">{{ job.minimum_experience_years }} Years</span>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 border rounded bg-white">
+              <span class="text-muted d-block">Candidate Documented</span>
+              <span class="fw-bold">
+                {% if application.resume and application.resume.parsed_experience_years is not none %}
+                  {{ application.resume.parsed_experience_years }} Years
+                {% elif application.candidate and application.candidate.years_of_experience %}
+                  {{ application.candidate.years_of_experience }} Years
+                {% else %}
+                  <span class="text-muted">Not specified</span>
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category 4: Educational Qualification -->
+    {% set qual_cat = category_scores.get('qualification', {}) %}
+    <div class="col-md-6">
+      <div class="card-enterprise p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-mortarboard text-primary fs-5 me-2"></i>
+            <h6 class="fw-bold mb-0">Qualification Credentials (10%)</h6>
+          </div>
+          {% if qual_cat.get('score') is not none %}
+            <span class="badge bg-primary-subtle text-primary fs-6">{{ qual_cat.score }}%</span>
+          {% else %}
+            <span class="badge bg-secondary-subtle text-secondary">
+              {{ 'N/A' if not qual_cat.get('is_applicable') else 'Unavailable' }}
+            </span>
+          {% endif %}
+        </div>
+
+        <p class="text-secondary small mb-3">{{ qual_cat.get('explanation') }}</p>
+
+        <div class="row g-2 small">
+          <div class="col-6">
+            <div class="p-2 border rounded bg-white">
+              <span class="text-muted d-block">Role Requirement</span>
+              <span class="fw-bold">{{ job.minimum_qualification or 'None specified' }}</span>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 border rounded bg-white">
+              <span class="text-muted d-block">Candidate Extracted</span>
+              <span class="fw-bold">
+                {% if application.resume and application.resume.get_extracted_data().get('education') %}
+                  {% set ed_list = application.resume.get_extracted_data().get('education') %}
+                  {{ ed_list[0].degree if ed_list else 'None detected' }}
+                {% else %}
+                  <span class="text-muted">None detected</span>
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Missing Evidence Disclosures -->
+  {% if missing_evidence %}
+    <div class="card-enterprise p-4 mb-4 border-warning-subtle bg-light">
+      <h6 class="fw-bold mb-2 text-warning-emphasis">
+        <i class="bi bi-info-circle-fill text-warning me-2"></i>Evidence Coverage Disclosures
+      </h6>
+      <ul class="mb-0 small ps-3">
+        {% for note in missing_evidence %}
+          <li>{{ note }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <!-- Responsible AI & Compliance Safeguards -->
+  <div class="card-enterprise p-4 bg-light border-0">
+    <div class="d-flex align-items-start gap-3">
+      <i class="bi bi-shield-check text-primary fs-3 mt-1"></i>
+      <div>
+        <h6 class="fw-bold mb-1">Responsible AI &amp; Fair Recruitment Safeguards</h6>
+        <p class="text-muted small mb-0 lh-base">
+          RecruitFlow AI evaluates candidate profiles solely against stated job skills, documented chronologies, and educational credentials.
+          <strong>No demographic or protected characteristics</strong> (including race, gender, age, religion, disability, or appearance) are measured or utilized.
+          Match scores reflect objective alignment with job criteria and are provided as an advisory aid; all interview and hiring determinations remain under the full authority and judgment of human recruitment professionals.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

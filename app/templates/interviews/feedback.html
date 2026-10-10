@@ -1,0 +1,121 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Submit Interview Feedback - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4" style="max-width: 900px;">
+  <div class="mb-4 pb-2 border-bottom">
+    <a href="{{ url_for('interviews.detail', interview_id=interview.id) }}" class="text-decoration-none small text-muted mb-2 d-inline-block">
+      <i class="bi bi-arrow-left me-1"></i>Back to Interview Details
+    </a>
+    <h3 class="fw-bold mb-1">Interviewer Evaluation Rubric</h3>
+    <p class="text-muted small mb-0">Record objective ratings, observations, and recommendations for this candidate round.</p>
+  </div>
+
+  <!-- Candidate & Session Context Card -->
+  <div class="card-enterprise p-3 mb-4 bg-light">
+    <div class="row align-items-center g-3">
+      <div class="col-sm-8">
+        <h6 class="fw-bold mb-1">{{ interview.application.candidate_user.full_name }}</h6>
+        <div class="small text-muted">
+          <span><i class="bi bi-briefcase me-1"></i>{{ interview.application.job.title }}</span>
+          <span class="mx-2">&bull;</span>
+          <span><i class="bi bi-calendar-event me-1"></i>{{ interview.round_name }}</span>
+        </div>
+      </div>
+      <div class="col-sm-4 text-sm-end">
+        <span class="badge bg-secondary-subtle text-secondary">
+          Evaluator: {{ current_user.full_name }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback Form -->
+  <div class="card-enterprise p-4">
+    <form method="POST" action="{{ url_for('interviews.feedback', interview_id=interview.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-star-half me-2"></i>Competency &amp; Skill Ratings</h6>
+      <p class="text-muted small mb-3">
+        Evaluate candidate competency on a standardized 1 (Far Below Expectations) to 5 (Exceptional) rubric.
+      </p>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold small">{{ form.technical_rating.label.text }}</label>
+          {{ form.technical_rating(class="form-select") }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold small">{{ form.problem_solving_rating.label.text }}</label>
+          {{ form.problem_solving_rating(class="form-select") }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold small">{{ form.communication_rating.label.text }}</label>
+          {{ form.communication_rating(class="form-select") }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold small">{{ form.role_relevant_rating.label.text }}</label>
+          {{ form.role_relevant_rating(class="form-select") }}
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold small">{{ form.overall_recommendation.label.text }} <span class="text-danger">*</span></label>
+        {{ form.overall_recommendation(class="form-select") }}
+      </div>
+
+      <hr class="my-4">
+
+      <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-journal-text me-2"></i>Structured Qualitative Observations</h6>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold small">{{ form.strengths.label.text }}</label>
+        {{ form.strengths(class="form-control", rows=3, placeholder="Demonstrated skills, architectural problem solving, code clarity, behavioral strengths...") }}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold small">{{ form.areas_for_improvement.label.text }}</label>
+        {{ form.areas_for_improvement(class="form-control", rows=3, placeholder="Identified gaps, missing prerequisites, areas requiring future coaching...") }}
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold small">{{ form.notes.label.text }}</label>
+        {{ form.notes(class="form-control", rows=4, placeholder="Private internal debrief notes, salary or seniority observations (Confidential to hiring team).") }}
+        <div class="form-text small text-danger"><i class="bi bi-shield-lock me-1"></i>Internal notes and rubric ratings are strictly confidential and never displayed to candidates.</div>
+      </div>
+
+      <hr class="my-4">
+
+      <h6 class="fw-bold mb-2 text-primary"><i class="bi bi-megaphone me-2"></i>Candidate-Facing Summary (Optional)</h6>
+      <p class="text-muted small mb-3">
+        Provide constructive guidance or interview feedback that may be published to the candidate portal.
+      </p>
+
+      <div class="form-check form-switch mb-3">
+        {{ form.is_candidate_facing(class="form-check-input", id="candidateFacingSwitch") }}
+        <label class="form-check-label fw-semibold small" for="candidateFacingSwitch">
+          {{ form.is_candidate_facing.label.text }}
+        </label>
+      </div>
+
+      <div class="mb-4">
+        {{ form.candidate_feedback(class="form-control", rows=3, placeholder="Constructive guidance for candidate growth (e.g. 'Strong algorithmic skills; recommend further study on distributed systems scaling').") }}
+      </div>
+
+      <div class="d-flex align-items-center justify-content-between pt-2">
+        <div class="form-check">
+          {{ form.is_draft(class="form-check-input", id="draftCheck") }}
+          <label class="form-check-label small text-muted" for="draftCheck">
+            {{ form.is_draft.label.text }}
+          </label>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('interviews.detail', interview_id=interview.id) }}" class="btn btn-outline-secondary">Cancel</a>
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

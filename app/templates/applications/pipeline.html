@@ -1,0 +1,250 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}Hiring Pipeline Board - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <!-- Pipeline Header & Job Filter -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-2 border-bottom">
+    <div>
+      <h3 class="fw-bold mb-1">Recruitment Pipeline Board</h3>
+      <p class="text-muted small mb-0">Manage candidate stage progressions from submission through evaluation to hire.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      {% if jobs %}
+        <form method="GET" action="{{ url_for('applications.pipeline') }}" class="d-inline">
+          <select name="job_id" class="form-select form-select-sm" onchange="this.form.submit()">
+            {% for j in jobs %}
+              <option value="{{ j.id }}" {% if current_job and current_job.id == j.id %}selected{% endif %}>
+                {{ j.title }} ({{ j.organization.name }})
+              </option>
+            {% endfor %}
+          </select>
+        </form>
+      {% endif %}
+      <a href="{{ url_for('applications.index') }}" class="btn btn-outline-enterprise btn-sm">
+        <i class="bi bi-list-ul me-1"></i>Table View
+      </a>
+      {% if current_job %}
+        <a href="{{ url_for('matching.job_rankings', job_id=current_job.id) }}" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-stars me-1"></i>AI Rankings
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if current_job %}
+    <!-- Pipeline Columns Container -->
+    <div class="d-flex gap-3 overflow-x-auto pb-4" style="min-height: 70vh;">
+
+      <!-- Stage Column Macro -->
+      {% set stages = [
+        ('submitted', 'Submitted', 'secondary'),
+        ('under_review', 'Under Review', 'info'),
+        ('shortlisted', 'Shortlisted', 'primary'),
+        ('interview', 'Interview Scheduled', 'warning'),
+        ('interview_completed', 'Interview Done', 'dark'),
+        ('offered', 'Offer Extended', 'teal'),
+        ('hired', 'Hired', 'success'),
+        ('rejected', 'Rejected', 'danger')
+      ] %}
+
+      {% for stage_key, stage_title, badge_color in stages %}
+        {% set candidates = board_data.get(stage_key, []) %}
+        <div class="pipeline-column flex-shrink-0" style="width: 290px;">
+          <!-- Column Header -->
+          <div class="d-flex justify-content-between align-items-center p-2 px-3 mb-2 bg-light border rounded-3">
+            <span class="fw-bold small text-dark">{{ stage_title }}</span>
+            <span class="badge bg-white text-secondary border rounded-pill">{{ candidates|length }}</span>
+          </div>
+
+          <!-- Cards List -->
+          <div class="d-flex flex-column gap-2" style="min-height: 200px;">
+            {% for app in candidates %}
+              <div class="card-enterprise p-3 shadow-sm bg-white border">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <a href="{{ url_for('applications.detail', application_id=app.id) }}" class="fw-bold text-dark text-decoration-none small text-truncate" style="max-width: 170px;">
+                    {{ app.candidate_user.full_name }}
+                  </a>
+                  {% if app.match_result and app.match_result.overall_score is not none %}
+                    <span class="badge {% if app.match_result.overall_score >= 80 %}bg-success-subtle text-success{% elif app.match_result.overall_score >= 60 %}bg-primary-subtle text-primary{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                      {{ app.match_result.overall_score|round(0) }}%
+                    </span>
+                  {% endif %}
+                </div>
+
+                <div class="text-muted small mb-2 d-flex align-items-center justify-content-between">
+                  <span><i class="bi bi-clock me-1"></i>{{ app.applied_at.strftime('%b %d') }}</span>
+                  {% if app.interviews.count() > 0 %}
+                    <span class="badge bg-light text-secondary border">
+                      <i class="bi bi-calendar-event me-1"></i>{{ app.interviews.count() }} round(s)
+                    </span>
+                  {% endif %}
+                </div>
+
+                <!-- Action Dropdown for Stage Progression -->
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                  {% if stage_key in ('shortlisted', 'interview', 'interview_completed') %}
+                    <a href="{{ url_for('interviews.schedule', application_id=app.id) }}" class="btn btn-xs btn-outline-primary py-1 px-2 small" style="font-size: 0.75rem;" title="Schedule Interview">
+                      <i class="bi bi-calendar-plus me-1"></i>Interview
+                    </a>
+                  {% else %}
+                    <span></span>
+                  {% endif %}
+
+                  <div class="dropdown">
+                    <button class="btn btn-xs btn-light border py-1 px-2 small dropdown-toggle" type="button" data-bs-toggle="dropdown" style="font-size: 0.75rem;">
+                      Move
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm small">
+                      <li class="dropdown-header py-1">Transition Stage</li>
+                      {% if stage_key == 'submitted' %}
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="under_review">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item">Under Review</button>
+                          </form>
+                        </li>
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="rejected">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item text-danger">Reject</button>
+                          </form>
+                        </li>
+                      {% elif stage_key == 'under_review' %}
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="shortlisted">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item">Shortlist</button>
+                          </form>
+                        </li>
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="rejected">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item text-danger">Reject</button>
+                          </form>
+                        </li>
+                      {% elif stage_key == 'shortlisted' %}
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="interview">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item">Interview Scheduled</button>
+                          </form>
+                        </li>
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="rejected">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item text-danger">Reject</button>
+                          </form>
+                        </li>
+                      {% elif stage_key == 'interview' %}
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="interview_completed">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item">Interview Completed</button>
+                          </form>
+                        </li>
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="rejected">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item text-danger">Reject</button>
+                          </form>
+                        </li>
+                      {% elif stage_key == 'interview_completed' %}
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="interview">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item">Next Interview Round</button>
+                          </form>
+                        </li>
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="offered">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item text-success">Extend Offer</button>
+                          </form>
+                        </li>
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="rejected">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item text-danger">Reject</button>
+                          </form>
+                        </li>
+                      {% elif stage_key == 'offered' %}
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="hired">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item text-success fw-bold">Mark Hired</button>
+                          </form>
+                        </li>
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="rejected">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item text-danger">Offer Declined / Reject</button>
+                          </form>
+                        </li>
+                      {% elif stage_key == 'rejected' %}
+                        <li>
+                          <form method="POST" action="{{ url_for('applications.update_stage', application_id=app.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="new_stage" value="under_review">
+                            <input type="hidden" name="reason" value="Reopened by recruiter reconsideration">
+                            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+                            <button type="submit" class="dropdown-item">Reopen to Review</button>
+                          </form>
+                        </li>
+                      {% endif %}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            {% else %}
+              <div class="p-3 text-center text-muted small border rounded-3 bg-light border-dashed">
+                No candidates
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+
+    </div>
+  {% else %}
+    <div class="card-enterprise p-4">
+      {{ empty.render_empty_state(
+        icon='bi-briefcase',
+        title='No active job requisitions',
+        description='Create a job opening to start receiving candidates and tracking them through your pipeline.',
+        action_url=url_for('jobs.create'),
+        action_text='Create Job Opening',
+        action_icon='bi-plus-lg'
+      ) }}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

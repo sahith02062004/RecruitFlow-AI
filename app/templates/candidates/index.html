@@ -1,0 +1,58 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}Candidates - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <div>
+      <h3 class="fw-bold mb-1">Candidate Directory</h3>
+      <p class="text-muted small mb-0">Registered candidates and indexed resume profiles.</p>
+    </div>
+  </div>
+
+  <div class="card-enterprise">
+    {% if candidates %}
+      <div class="table-responsive">
+        <table class="table table-enterprise">
+          <thead>
+            <tr>
+              <th>Candidate Name</th>
+              <th>Headline / Role</th>
+              <th>Location</th>
+              <th>Experience</th>
+              <th>Date Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for candidate in candidates %}
+            <tr>
+              <td class="fw-semibold">{{ candidate.user.full_name }}</td>
+              <td>{{ candidate.headline or 'N/A' }}</td>
+              <td>{{ candidate.location or 'N/A' }}</td>
+              <td>{{ candidate.years_of_experience }} yrs</td>
+              <td class="text-muted small">{{ candidate.created_at.strftime('%Y-%m-%d') }}</td>
+              <td>
+                <a href="{{ url_for('candidates.view_candidate', candidate_id=candidate.id) }}" class="btn btn-sm btn-outline-enterprise">Profile</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-4">
+        {{ empty.render_empty_state(
+          icon='bi-people',
+          title='No candidates registered yet',
+          description='When candidates submit their profiles or sign up for an account, they will be listed here.',
+          action_url=url_for('auth.register'),
+          action_text='Create Candidate Account'
+        ) }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

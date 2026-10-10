@@ -1,0 +1,75 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Candidate Sign Up - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+      <div class="card-enterprise p-4 p-md-5">
+        <div class="text-center mb-4">
+          <div class="stat-icon teal mx-auto mb-3">
+            <i class="bi bi-person-workspace"></i>
+          </div>
+          <h4 class="fw-bold">Candidate Registration</h4>
+          <p class="text-muted small">Create your candidate profile to apply and track your job applications</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.register_candidate') }}" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ form.full_name.label(class="form-label fw-semibold small") }}
+            {{ form.full_name(class="form-control" + (" is-invalid" if form.full_name.errors else ""), placeholder="Jane Doe") }}
+            {% for error in form.full_name.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ form.email.label(class="form-label fw-semibold small") }}
+            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="jane.doe@example.com") }}
+            {% for error in form.email.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              {{ form.password.label(class="form-label fw-semibold small") }}
+              {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="At least 8 chars") }}
+              {% for error in form.password.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              {{ form.confirm_password.label(class="form-label fw-semibold small") }}
+              {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""), placeholder="Confirm password") }}
+              {% for error in form.confirm_password.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-4 form-check">
+            {{ form.agree_terms(class="form-check-input" + (" is-invalid" if form.agree_terms.errors else "")) }}
+            {{ form.agree_terms.label(class="form-check-label small text-muted") }}
+            {% for error in form.agree_terms.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <button type="submit" class="btn btn-primary-enterprise w-100 py-2">
+            Create Candidate Account
+          </button>
+        </form>
+
+        <div class="text-center mt-4 pt-3 border-top">
+          <p class="text-muted small mb-0">Already registered? <a href="{{ url_for('auth.login') }}" class="text-primary fw-semibold">Sign In</a></p>
+          <p class="text-muted small mt-1 mb-0"><a href="{{ url_for('auth.register') }}" class="text-secondary">Switch to Recruiter Signup</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

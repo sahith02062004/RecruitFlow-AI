@@ -1,0 +1,284 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}Candidate Rankings - {{ job.title }} - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <!-- Top Navigation & Actions -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom gap-3">
+    <div class="d-flex align-items-center">
+      <a href="{{ url_for('matching.index') }}" class="btn btn-sm btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <h4 class="fw-bold mb-0">Candidate Rankings: {{ job.title }}</h4>
+          <span class="badge bg-light text-dark border">{{ job.status|capitalize }}</span>
+        </div>
+        <p class="text-muted small mb-0">
+          {{ job.organization.name }} &bull; {{ job.department or 'General' }} &bull; {{ job.location or 'Remote' }}
+        </p>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('jobs.detail', job_id=job.id) }}" class="btn btn-outline-enterprise">
+        <i class="bi bi-briefcase me-1"></i> View Requisition
+      </a>
+      <form method="POST" action="{{ url_for('matching.run_job_matching', job_id=job.id) }}" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary-enterprise">
+          <i class="bi bi-arrow-clockwise me-1"></i> Rerun Matching Engine
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Requisition Requirements Snapshot -->
+  <div class="card-enterprise p-3 mb-4 bg-light border-0">
+    <div class="row g-3 small">
+      <div class="col-md-4">
+        <span class="text-muted fw-semibold d-block">Required Skills:</span>
+        <span class="fw-medium text-dark">{{ job.required_skills or 'None specified' }}</span>
+      </div>
+      <div class="col-md-3">
+        <span class="text-muted fw-semibold d-block">Preferred Skills:</span>
+        <span class="fw-medium text-dark">{{ job.preferred_skills or 'None specified' }}</span>
+      </div>
+      <div class="col-md-2">
+        <span class="text-muted fw-semibold d-block">Min Experience:</span>
+        <span class="fw-medium text-dark">{{ job.minimum_experience_years }} years</span>
+      </div>
+      <div class="col-md-3">
+        <span class="text-muted fw-semibold d-block">Min Qualification:</span>
+        <span class="fw-medium text-dark">{{ job.minimum_qualification or 'None specified' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tie-Breaking & Transparency Policy Notice -->
+  <div class="alert alert-info border-info-subtle d-flex align-items-center mb-4 p-3 rounded-3" role="alert">
+    <i class="bi bi-info-circle-fill fs-5 text-primary me-3"></i>
+    <div class="small">
+      <strong>Transparent Ranking Policy:</strong> Candidates are ranked deterministically by
+      <strong>Overall Match Score</strong> (50% Required Skills, 20% Preferred Skills, 20% Experience, 10% Qualification).
+      Ties are broken by <strong>Evidence Coverage</strong> &rarr; <strong>Earlier Application Timestamp</strong> &rarr; <strong>Application ID</strong>.
+      Candidates with insufficient resume evidence are grouped separately at the end.
+    </div>
+  </div>
+
+  <!-- Filter & Search Bar -->
+  <div class="card-enterprise p-3 mb-4">
+    <form method="GET" action="{{ url_for('matching.job_rankings', job_id=job.id) }}" class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+          <input type="text" name="q" class="form-control border-start-0" placeholder="Search candidate name or email..." value="{{ search_query }}">
+        </div>
+      </div>
+      <div class="col-md-4">
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Application Statuses</option>
+          <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Submitted</option>
+          <option value="under_review" {% if status_filter == 'under_review' %}selected{% endif %}>Under Review</option>
+          <option value="shortlisted" {% if status_filter == 'shortlisted' %}selected{% endif %}>Shortlisted</option>
+          <option value="interview" {% if status_filter == 'interview' %}selected{% endif %}>Interview</option>
+          <option value="offered" {% if status_filter == 'offered' %}selected{% endif %}>Offered</option>
+          <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+        </select>
+      </div>
+      <div class="col-md-3 text-md-end">
+        <button type="submit" class="btn btn-sm btn-outline-enterprise me-1">Filter</button>
+        {% if search_query or (status_filter and status_filter != 'all') %}
+          <a href="{{ url_for('matching.job_rankings', job_id=job.id) }}" class="btn btn-sm btn-link text-muted">Reset</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Ranked Candidates Table -->
+  <div class="card-enterprise">
+    <div class="card-header-clean d-flex justify-content-between align-items-center">
+      <h6 class="fw-semibold mb-0">Applicant Leaderboard</h6>
+      <span class="badge bg-light text-dark border">{{ total_count }} Total &bull; {{ scored_count }} Scored</span>
+    </div>
+
+    {% if items %}
+      <div class="table-responsive">
+        <table class="table table-enterprise align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 70px;">Rank</th>
+              <th>Candidate</th>
+              <th>Overall Score</th>
+              <th>Evidence Coverage</th>
+              <th>Required Skills</th>
+              <th>Preferred Skills</th>
+              <th>Experience</th>
+              <th>Freshness</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for it in items %}
+            {% set app = it.application %}
+            {% set user = it.candidate_user %}
+            {% set score = it.overall_score %}
+            <tr class="{% if it.is_stale %}table-warning-subtle{% endif %}">
+              <!-- Rank -->
+              <td>
+                {% if it.rank is not none %}
+                  {% if it.rank == 1 %}
+                    <span class="badge bg-warning text-dark border px-2 py-1"><i class="bi bi-trophy-fill me-1"></i>#1</span>
+                  {% elif it.rank == 2 %}
+                    <span class="badge bg-secondary-subtle text-dark border px-2 py-1">#2</span>
+                  {% elif it.rank == 3 %}
+                    <span class="badge bg-light text-dark border px-2 py-1">#3</span>
+                  {% else %}
+                    <span class="fw-bold text-muted ps-2">#{{ it.rank }}</span>
+                  {% endif %}
+                {% else %}
+                  <span class="badge bg-light text-muted border">&mdash;</span>
+                {% endif %}
+              </td>
+
+              <!-- Candidate -->
+              <td>
+                <div class="fw-semibold text-dark">{{ user.full_name }}</div>
+                <div class="text-muted small">
+                  {{ user.email }} &bull; Applied {{ app.applied_at.strftime('%b %d, %Y') }}
+                </div>
+                <span class="badge bg-light text-secondary border small mt-1">Stage: {{ app.status|capitalize }}</span>
+              </td>
+
+              <!-- Overall Score -->
+              <td>
+                {% if score is not none %}
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold fs-5 {% if score >= 80 %}text-success{% elif score >= 60 %}text-primary{% elif score >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                      {{ score }}%
+                    </span>
+                  </div>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary border">Unavailable</span>
+                {% endif %}
+              </td>
+
+              <!-- Evidence Coverage -->
+              <td>
+                <div class="d-flex align-items-center gap-1">
+                  <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+                    <div class="progress-bar {% if it.evidence_coverage >= 80 %}bg-success{% elif it.evidence_coverage >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
+                         style="width: {{ it.evidence_coverage }}%;"></div>
+                  </div>
+                  <span class="text-muted small ms-1">{{ it.evidence_coverage }}%</span>
+                </div>
+              </td>
+
+              <!-- Required Skills Match -->
+              <td>
+                <span class="badge bg-light text-dark border">
+                  {{ it.matched_required|length }} matched
+                </span>
+                {% if it.missing_required %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">
+                    {{ it.missing_required|length }} missing
+                  </span>
+                {% endif %}
+              </td>
+
+              <!-- Preferred Skills -->
+              <td>
+                {% if it.matched_preferred or it.missing_preferred %}
+                  <span class="badge bg-light text-dark border">{{ it.matched_preferred|length }} matched</span>
+                {% else %}
+                  <span class="text-muted small fst-italic">N/A</span>
+                {% endif %}
+              </td>
+
+              <!-- Experience Alignment -->
+              <td>
+                <span class="text-muted small text-truncate d-inline-block" style="max-width: 140px;" title="{{ it.experience_explanation }}">
+                  {{ it.experience_explanation }}
+                </span>
+              </td>
+
+              <!-- Freshness -->
+              <td>
+                {% if it.is_stale %}
+                  <span class="badge bg-warning-subtle text-warning border border-warning-subtle" title="Requirements or resume have updated since last evaluation">
+                    <i class="bi bi-exclamation-circle me-1"></i>Stale
+                  </span>
+                {% elif it.status == 'current' %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">
+                    <i class="bi bi-check-circle me-1"></i>Current
+                  </span>
+                {% elif it.status == 'unavailable' %}
+                  <span class="badge bg-secondary-subtle text-secondary border">Limited Data</span>
+                {% else %}
+                  <span class="badge bg-light text-muted border">Unscored</span>
+                {% endif %}
+              </td>
+
+              <!-- Actions -->
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{{ url_for('matching.explanation', application_id=app.id) }}" class="btn btn-outline-enterprise" title="View Match Explanation &amp; Evidence">
+                    <i class="bi bi-info-circle me-1"></i> Explain
+                  </a>
+                  <a href="{{ url_for('applications.detail', application_id=app.id) }}" class="btn btn-outline-secondary" title="Application Review">
+                    <i class="bi bi-person-badge"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if pagination and pagination.pages > 1 %}
+        <div class="p-3 border-top d-flex justify-content-between align-items-center">
+          <span class="text-muted small">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+          <nav>
+            <ul class="pagination pagination-sm mb-0">
+              {% if pagination.has_prev %}
+                <li class="page-item">
+                  <a class="page-link" href="{{ url_for('matching.job_rankings', job_id=job.id, page=pagination.prev_num, status=status_filter, q=search_query) }}">Previous</a>
+                </li>
+              {% endif %}
+              {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if p %}
+                  <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('matching.job_rankings', job_id=job.id, page=p, status=status_filter, q=search_query) }}">{{ p }}</a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                {% endif %}
+              {% endfor %}
+              {% if pagination.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="{{ url_for('matching.job_rankings', job_id=job.id, page=pagination.next_num, status=status_filter, q=search_query) }}">Next</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+      {% endif %}
+
+    {% else %}
+      <div class="p-5 text-center">
+        {{ empty.render_empty_state(
+          icon='bi-people',
+          title='No applications match current filters',
+          description='No active candidates found for this job opening matching your criteria.',
+          action_url=url_for('matching.job_rankings', job_id=job.id),
+          action_text='Clear Filters'
+        ) }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

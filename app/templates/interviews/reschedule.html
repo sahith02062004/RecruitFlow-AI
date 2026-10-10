@@ -1,0 +1,89 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Reschedule Interview - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4" style="max-width: 900px;">
+  <div class="mb-4 pb-2 border-bottom">
+    <a href="{{ url_for('interviews.detail', interview_id=interview.id) }}" class="text-decoration-none small text-muted mb-2 d-inline-block">
+      <i class="bi bi-arrow-left me-1"></i>Back to Interview Details
+    </a>
+    <h3 class="fw-bold mb-1">Reschedule Interview Session</h3>
+    <p class="text-muted small mb-0">Update timing, format, or assigned interviewers for this evaluation round.</p>
+  </div>
+
+  <div class="card-enterprise p-4">
+    <form method="POST" action="{{ url_for('interviews.reschedule', interview_id=interview.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-7">
+          <label class="form-label fw-semibold small">{{ form.round_name.label.text }} <span class="text-danger">*</span></label>
+          {{ form.round_name(class="form-control" + (" is-invalid" if form.round_name.errors else "")) }}
+          {% for err in form.round_name.errors %}
+            <div class="invalid-feedback">{{ err }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-md-5">
+          <label class="form-label fw-semibold small">{{ form.interview_type.label.text }} <span class="text-danger">*</span></label>
+          {{ form.interview_type(class="form-select") }}
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold small">{{ form.scheduled_at.label.text }} <span class="text-danger">*</span></label>
+          {{ form.scheduled_at(class="form-control" + (" is-invalid" if form.scheduled_at.errors else ""), type="datetime-local") }}
+          {% for err in form.scheduled_at.errors %}
+            <div class="invalid-feedback">{{ err }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold small">{{ form.end_time.label.text }} <span class="text-danger">*</span></label>
+          {{ form.end_time(class="form-control" + (" is-invalid" if form.end_time.errors else ""), type="datetime-local") }}
+          {% for err in form.end_time.errors %}
+            <div class="invalid-feedback">{{ err }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold small">{{ form.timezone.label.text }} <span class="text-danger">*</span></label>
+          {{ form.timezone(class="form-select") }}
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-12">
+          <label class="form-label fw-semibold small">{{ form.meeting_link.label.text }}</label>
+          {{ form.meeting_link(class="form-control" + (" is-invalid" if form.meeting_link.errors else ""), placeholder="https://meet.google.com/xyz") }}
+          {% for err in form.meeting_link.errors %}
+            <div class="invalid-feedback">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="col-12">
+          <label class="form-label fw-semibold small">{{ form.location.label.text }}</label>
+          {{ form.location(class="form-control" + (" is-invalid" if form.location.errors else "")) }}
+          {% for err in form.location.errors %}
+            <div class="invalid-feedback">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold small">{{ form.interviewer_ids.label.text }}</label>
+        {{ form.interviewer_ids(class="form-select", size=4, multiple=True) }}
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold small">{{ form.instructions.label.text }}</label>
+        {{ form.instructions(class="form-control", rows=3) }}
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{{ url_for('interviews.detail', interview_id=interview.id) }}" class="btn btn-outline-secondary">Cancel</a>
+        {{ form.submit(class="btn btn-primary") }}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

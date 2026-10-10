@@ -1,0 +1,45 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Recruiters - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <div>
+      <h3 class="fw-bold mb-1">Recruitment Team Directory</h3>
+      <p class="text-muted small mb-0">Hiring managers, recruiters, and team requisitions.</p>
+    </div>
+  </div>
+
+  <div class="card-enterprise">
+    <div class="table-responsive">
+      <table class="table table-enterprise">
+        <thead>
+          <tr>
+            <th>Recruiter</th>
+            <th>Email</th>
+            <th>Company</th>
+            <th>Department</th>
+            <th>Open Jobs</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in recruiters %}
+          <tr>
+            <td class="fw-semibold">{{ r.user.full_name }}</td>
+            <td>{{ r.user.email }}</td>
+            <td>{{ r.company_name }}</td>
+            <td>{{ r.department or 'Talent Acquisition' }}</td>
+            <td><span class="badge bg-light text-dark border">{{ r.jobs.count() }}</span></td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">No recruiters registered yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

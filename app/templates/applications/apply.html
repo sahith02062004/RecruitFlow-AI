@@ -1,0 +1,81 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Apply for {{ job.title }} - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card-enterprise p-4 p-md-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+          <div>
+            <span class="badge bg-primary-subtle text-primary mb-1">{{ job.organization.name if job.organization else 'RecruitFlow Team' }}</span>
+            <h4 class="fw-bold mb-1">Submit Application for {{ job.title }}</h4>
+            <p class="text-muted small mb-0">{{ job.location or 'Multiple Locations' }} &bull; {{ job.workplace_type|capitalize }}</p>
+          </div>
+          <a href="{{ url_for('jobs.detail', job_id=job.id) }}" class="btn btn-outline-enterprise btn-sm">Cancel</a>
+        </div>
+
+        <!-- Profile Verification Callout -->
+        <div class="p-3 bg-light rounded-3 mb-4 border d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-3">
+            <div class="stat-icon teal p-2" style="width: 42px; height: 42px; font-size: 1.25rem;">
+              <i class="bi bi-person-check"></i>
+            </div>
+            <div>
+              <div class="fw-semibold">{{ current_user.full_name }}</div>
+              <div class="text-muted small">{{ current_user.email }} &bull; Profile linked automatically</div>
+            </div>
+          </div>
+          <a href="{{ url_for('candidates.profile') }}" target="_blank" class="btn btn-sm btn-outline-enterprise">Review Profile</a>
+        </div>
+
+        <form method="POST" action="{{ url_for('applications.apply', job_id=job.id) }}" novalidate>
+          {{ form.hidden_tag() }}
+
+          <!-- Resume Attachment Selection -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold small">Select Attached Resume</label>
+            {% if resumes %}
+              <div class="list-group">
+                {% for r in resumes %}
+                  <label class="list-group-item d-flex gap-3 align-items-center">
+                    <input class="form-check-input flex-shrink-0" type="radio" name="resume_id" value="{{ r.id }}" {% if loop.first %}checked{% endif %}>
+                    <span>
+                      <i class="bi bi-file-earmark-pdf text-danger me-1"></i>
+                      <strong>{{ r.original_filename }}</strong>
+                      <small class="d-block text-muted">Uploaded {{ r.created_at.strftime('%Y-%m-%d') }}</small>
+                    </span>
+                  </label>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="alert alert-warning small mb-0">
+                <i class="bi bi-exclamation-triangle me-1"></i> You haven't uploaded a resume document yet. 
+                <a href="{{ url_for('resumes.upload') }}" target="_blank" class="alert-link">Upload one here</a> or submit with your profile summary.
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Cover Letter -->
+          <div class="mb-4">
+            {{ form.cover_letter.label(class="form-label fw-semibold small") }}
+            {{ form.cover_letter(class="form-control" + (" is-invalid" if form.cover_letter.errors else ""), rows="6", placeholder="Explain why you're a standout fit for this role, key projects, and relevant engineering achievements...") }}
+            <div class="form-text small text-muted">A concise note highlighting relevant skills boosts candidate visibility.</div>
+            {% for error in form.cover_letter.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <a href="{{ url_for('jobs.detail', job_id=job.id) }}" class="btn btn-outline-enterprise">Discard</a>
+            <button type="submit" class="btn btn-primary-enterprise px-4">
+              <i class="bi bi-send me-1"></i> Confirm &amp; Submit Application
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

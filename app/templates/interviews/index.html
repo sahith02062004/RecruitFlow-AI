@@ -1,0 +1,144 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}Interview Management - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-2 border-bottom">
+    <div>
+      <h3 class="fw-bold mb-1">Interview Scheduling &amp; Coordination</h3>
+      <p class="text-muted small mb-0">Track multi-round evaluations, assigned interviewers, meeting details, and rubric feedback.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('applications.pipeline') }}" class="btn btn-outline-enterprise btn-sm">
+        <i class="bi bi-kanban me-1"></i>Hiring Pipeline
+      </a>
+      <a href="{{ url_for('applications.index') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Schedule from Applications
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters Toolbar -->
+  <div class="card-enterprise p-3 mb-4">
+    <form method="GET" action="{{ url_for('interviews.index') }}" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <select name="job_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">All Job Requisitions</option>
+          {% for j in jobs %}
+            <option value="{{ j.id }}" {% if current_job_id == j.id %}selected{% endif %}>{{ j.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">All Interview Statuses</option>
+          <option value="scheduled" {% if current_status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+          <option value="confirmed" {% if current_status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+          <option value="completed" {% if current_status == 'completed' %}selected{% endif %}>Completed</option>
+          <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+          <option value="no_show" {% if current_status == 'no_show' %}selected{% endif %}>No-Show</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        {% if current_status or current_job_id %}
+          <a href="{{ url_for('interviews.index') }}" class="btn btn-sm btn-link text-decoration-none">
+            <i class="bi bi-x-circle me-1"></i>Clear Filters
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Interviews Table -->
+  <div class="card-enterprise">
+    {% if interviews %}
+      <div class="table-responsive">
+        <table class="table table-enterprise align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Candidate &amp; Role</th>
+              <th>Round &amp; Format</th>
+              <th>Date &amp; Time (UTC)</th>
+              <th>Assigned Evaluators</th>
+              <th>Status</th>
+              <th>Feedback</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in interviews %}
+              <tr>
+                <td>
+                  <div class="fw-bold">{{ item.application.candidate_user.full_name }}</div>
+                  <small class="text-muted">{{ item.application.job.title }}</small>
+                </td>
+                <td>
+                  <div class="fw-semibold">{{ item.round_name }}</div>
+                  <span class="badge bg-light text-secondary border">
+                    <i class="bi {% if item.interview_type == 'online' %}bi-camera-video{% elif item.interview_type == 'phone' %}bi-telephone{% else %}bi-building{% endif %} me-1"></i>
+                    {{ item.interview_type|capitalize }}
+                  </span>
+                </td>
+                <td>
+                  <div><i class="bi bi-calendar3 me-1 text-muted"></i>{{ item.scheduled_at.strftime('%Y-%m-%d') }}</div>
+                  <small class="text-muted">
+                    {{ item.scheduled_at.strftime('%H:%M') }}{% if item.end_time %} - {{ item.end_time.strftime('%H:%M') }}{% endif %} {{ item.timezone }}
+                  </small>
+                </td>
+                <td>
+                  <small class="d-block text-secondary">
+                    {{ item.interviewer_name }}
+                  </small>
+                </td>
+                <td>
+                  <span class="badge {% if item.status == 'completed' %}bg-success-subtle text-success border border-success-subtle{% elif item.status == 'scheduled' %}bg-primary-subtle text-primary border border-primary-subtle{% elif item.status == 'cancelled' %}bg-danger-subtle text-danger border border-danger-subtle{% else %}bg-secondary-subtle text-secondary border{% endif %}">
+                    {{ item.status.replace('_', ' ')|capitalize }}
+                  </span>
+                </td>
+                <td>
+                  {% set submitted_count = item.feedback_records.filter_by(status='submitted').count() %}
+                  {% if submitted_count > 0 %}
+                    <span class="badge bg-info-subtle text-info border border-info-subtle">
+                      <i class="bi bi-check2-circle me-1"></i>{{ submitted_count }} Submitted
+                    </span>
+                    {% if item.average_rating %}
+                      <small class="d-block text-muted">Avg: {{ item.average_rating }}/5</small>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge bg-light text-muted border">Pending</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <a href="{{ url_for('interviews.detail', interview_id=item.id) }}" class="btn btn-outline-enterprise">
+                      Manage
+                    </a>
+                    {% if item.status == 'scheduled' %}
+                      <a href="{{ url_for('interviews.reschedule', interview_id=item.id) }}" class="btn btn-outline-secondary" title="Reschedule">
+                        <i class="bi bi-calendar-event"></i>
+                      </a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-4">
+        {{ empty.render_empty_state(
+          icon='bi-calendar-x',
+          title='No interviews found',
+          description='Schedule interview sessions for applicants from the applications pipeline to coordinate multi-round evaluations.',
+          action_url=url_for('applications.index'),
+          action_text='Open Candidate Pipeline',
+          action_icon='bi-file-earmark-person'
+        ) }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

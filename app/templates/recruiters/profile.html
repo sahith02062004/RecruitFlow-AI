@@ -1,0 +1,68 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Recruiter Profile - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card-enterprise p-4 p-md-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+          <div>
+            <h4 class="fw-bold mb-1">Recruiter Profile</h4>
+            <p class="text-muted small mb-0">Update your professional recruitment credentials and company details.</p>
+          </div>
+          <a href="{{ url_for('recruiters.dashboard') }}" class="btn btn-outline-enterprise btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Dashboard
+          </a>
+        </div>
+
+        <form method="POST" action="{{ url_for('recruiters.profile') }}" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              {{ form.job_title.label(class="form-label fw-semibold small") }}
+              {{ form.job_title(class="form-control" + (" is-invalid" if form.job_title.errors else ""), placeholder="e.g. Lead Technical Recruiter") }}
+              {% for error in form.job_title.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              {{ form.department.label(class="form-label fw-semibold small") }}
+              {{ form.department(class="form-control" + (" is-invalid" if form.department.errors else ""), placeholder="e.g. Talent Acquisition") }}
+              {% for error in form.department.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              {{ form.company_name.label(class="form-label fw-semibold small") }}
+              {{ form.company_name(class="form-control" + (" is-invalid" if form.company_name.errors else ""), placeholder="e.g. Acme Corp") }}
+              {% for error in form.company_name.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              {{ form.phone.label(class="form-label fw-semibold small") }}
+              {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""), placeholder="+1 (555) 019-2834") }}
+              {% for error in form.phone.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <a href="{{ url_for('recruiters.dashboard') }}" class="btn btn-outline-enterprise">Cancel</a>
+            <button type="submit" class="btn btn-primary-enterprise px-4">
+              Save Profile
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}My Interviews - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <div>
+      <h3 class="fw-bold mb-1">
+        {% if is_candidate %}My Scheduled Interviews{% else %}My Evaluation Assignments{% endif %}
+      </h3>
+      <p class="text-muted small mb-0">
+        {% if is_candidate %}
+          View your upcoming interview schedules, preparation instructions, and video meeting access links.
+        {% else %}
+          Candidate interviews assigned to you for technical and behavioral evaluation.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="card-enterprise">
+    {% if interviews %}
+      <div class="table-responsive">
+        <table class="table table-enterprise align-middle mb-0">
+          <thead>
+            <tr>
+              {% if is_candidate %}
+                <th>Position &amp; Organization</th>
+              {% else %}
+                <th>Candidate &amp; Role</th>
+              {% endif %}
+              <th>Round Name</th>
+              <th>Format</th>
+              <th>Date &amp; Time</th>
+              <th>Status</th>
+              {% if not is_candidate %}
+                <th>Feedback</th>
+              {% endif %}
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in interviews %}
+              <tr>
+                <td>
+                  {% if is_candidate %}
+                    <div class="fw-bold">{{ item.application.job.title }}</div>
+                    <small class="text-muted">{{ item.application.job.organization.name }}</small>
+                  {% else %}
+                    <div class="fw-bold">{{ item.application.candidate_user.full_name }}</div>
+                    <small class="text-muted">{{ item.application.job.title }}</small>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="fw-semibold">{{ item.round_name }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-light text-secondary border">
+                    <i class="bi {% if item.interview_type == 'online' %}bi-camera-video{% elif item.interview_type == 'phone' %}bi-telephone{% else %}bi-building{% endif %} me-1"></i>
+                    {{ item.interview_type|capitalize }}
+                  </span>
+                </td>
+                <td>
+                  <div><i class="bi bi-calendar3 me-1 text-muted"></i>{{ item.scheduled_at.strftime('%a, %b %d, %Y') }}</div>
+                  <small class="text-muted">
+                    {{ item.scheduled_at.strftime('%H:%M') }}{% if item.end_time %} - {{ item.end_time.strftime('%H:%M') }}{% endif %} {{ item.timezone }}
+                  </small>
+                </td>
+                <td>
+                  <span class="badge {% if item.status == 'completed' %}bg-success-subtle text-success border border-success-subtle{% elif item.status == 'scheduled' %}bg-primary-subtle text-primary border border-primary-subtle{% elif item.status == 'cancelled' %}bg-danger-subtle text-danger border border-danger-subtle{% else %}bg-secondary-subtle text-secondary border{% endif %}">
+                    {{ item.status.replace('_', ' ')|capitalize }}
+                  </span>
+                </td>
+                {% if not is_candidate %}
+                  <td>
+                    {% set my_fb = item.feedback_records.filter_by(interviewer_user_id=current_user.id).first() %}
+                    {% if my_fb and my_fb.status == 'submitted' %}
+                      <span class="badge bg-success-subtle text-success border border-success-subtle">
+                        <i class="bi bi-check2 me-1"></i>Submitted
+                      </span>
+                    {% elif my_fb and my_fb.status == 'draft' %}
+                      <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Draft Saved</span>
+                    {% else %}
+                      <span class="badge bg-light text-muted border">Pending</span>
+                    {% endif %}
+                  </td>
+                {% endif %}
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <a href="{{ url_for('interviews.detail', interview_id=item.id) }}" class="btn btn-outline-enterprise">
+                      View Details
+                    </a>
+                    {% if is_candidate and item.meeting_link and item.status == 'scheduled' %}
+                      <a href="{{ item.meeting_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" title="Join Meeting">
+                        <i class="bi bi-camera-video me-1"></i>Join
+                      </a>
+                    {% endif %}
+                    {% if not is_candidate and item.status != 'cancelled' %}
+                      <a href="{{ url_for('interviews.feedback', interview_id=item.id) }}" class="btn btn-outline-primary" title="Submit / Update Feedback">
+                        <i class="bi bi-pencil-square me-1"></i>Feedback
+                      </a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-4">
+        {{ empty.render_empty_state(
+          icon='bi-calendar-check',
+          title='No interviews scheduled yet',
+          description='When interview rounds are coordinated, full scheduling details, dates, and meeting links will appear here.'
+        ) }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

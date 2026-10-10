@@ -1,0 +1,87 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}My Job Applications - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <div>
+      <h3 class="fw-bold mb-1">My Applications</h3>
+      <p class="text-muted small mb-0">Track real-time status, recruiter reviews, and submission timelines.</p>
+    </div>
+    <a href="{{ url_for('jobs.index') }}" class="btn btn-primary-enterprise">
+      <i class="bi bi-search me-1"></i> Browse More Openings
+    </a>
+  </div>
+
+  <div class="card-enterprise">
+    <div class="card-header-clean">
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('applications.index') }}" class="btn btn-sm {% if not current_status %}btn-primary-enterprise{% else %}btn-outline-enterprise{% endif %}">All Applications</a>
+        <a href="{{ url_for('applications.index', status='submitted') }}" class="btn btn-sm {% if current_status == 'submitted' %}btn-primary-enterprise{% else %}btn-outline-enterprise{% endif %}">Submitted</a>
+        <a href="{{ url_for('applications.index', status='under_review') }}" class="btn btn-sm {% if current_status == 'under_review' %}btn-primary-enterprise{% else %}btn-outline-enterprise{% endif %}">Under Review</a>
+        <a href="{{ url_for('applications.index', status='shortlisted') }}" class="btn btn-sm {% if current_status == 'shortlisted' %}btn-primary-enterprise{% else %}btn-outline-enterprise{% endif %}">Shortlisted</a>
+      </div>
+      <span class="text-muted small">{{ applications|length }} Total Applications</span>
+    </div>
+
+    <div class="p-0">
+      {% if applications %}
+        <div class="table-responsive">
+          <table class="table table-enterprise">
+            <thead>
+              <tr>
+                <th>Job Requisition</th>
+                <th>Company</th>
+                <th>Date Applied</th>
+                <th>Application Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for app in applications %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('applications.detail', application_id=app.id) }}" class="fw-bold text-dark text-decoration-none">
+                    {{ app.job.title }}
+                  </a>
+                  <span class="d-block small text-muted">{{ app.job.department or 'Engineering' }}</span>
+                </td>
+                <td class="text-secondary fw-medium">
+                  {{ app.job.organization.name if app.job.organization else 'RecruitFlow Team' }}
+                </td>
+                <td class="text-muted small">
+                  {{ app.applied_at.strftime('%B %d, %Y') }}
+                </td>
+                <td>
+                  <span class="badge-status {{ 'active' if app.status == 'shortlisted' else ('draft' if app.status == 'withdrawn' else 'pending') }}">
+                    {{ app.status|capitalize }}
+                  </span>
+                </td>
+                <td>
+                  <a href="{{ url_for('applications.detail', application_id=app.id) }}" class="btn btn-sm btn-outline-enterprise">
+                    View Details
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="p-4">
+          {{ empty.render_empty_state(
+            icon='bi-file-earmark-person',
+            title='No applications submitted yet',
+            description='Explore published job openings and apply with your profile to start tracking your recruitment status.',
+            action_url=url_for('jobs.index'),
+            action_text='Explore Available Jobs',
+            action_icon='bi-briefcase'
+          ) }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Join RecruitFlow AI - Select Account Type{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="text-center max-w-700 mx-auto mb-5">
+    <div class="d-inline-flex align-items-center gap-2 px-3 py-1 mb-3 rounded-pill bg-light border text-primary small fw-semibold">
+      <i class="bi bi-person-badge"></i> Account Onboarding
+    </div>
+    <h2 class="fw-bold">How will you be using RecruitFlow AI?</h2>
+    <p class="text-muted">Choose your role to get the right workflows, privacy controls, and features.</p>
+  </div>
+
+  <div class="row justify-content-center g-4">
+    <!-- Candidate Option -->
+    <div class="col-md-5">
+      <div class="card-enterprise p-4 p-lg-5 h-100 text-center d-flex flex-column justify-content-between">
+        <div>
+          <div class="stat-icon teal mx-auto mb-4" style="width: 64px; height: 64px; font-size: 1.75rem;">
+            <i class="bi bi-person-workspace"></i>
+          </div>
+          <h4 class="fw-bold mb-2">I am a Candidate</h4>
+          <p class="text-muted small mb-4">
+            Create an applicant profile, upload and manage your resumes, and track your application status across open roles.
+          </p>
+          <ul class="list-unstyled text-start small text-muted mb-4">
+            <li class="mb-2"><i class="bi bi-check2-circle text-teal me-2"></i>Private applicant dashboard</li>
+            <li class="mb-2"><i class="bi bi-check2-circle text-teal me-2"></i>Automatic multi-format resume parsing</li>
+            <li class="mb-2"><i class="bi bi-check2-circle text-teal me-2"></i>Transparent status and match feedback</li>
+          </ul>
+        </div>
+        <a href="{{ url_for('auth.register_candidate') }}" class="btn btn-primary-enterprise w-100 py-2">
+          Sign Up as Candidate <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Recruiter Option -->
+    <div class="col-md-5">
+      <div class="card-enterprise p-4 p-lg-5 h-100 text-center d-flex flex-column justify-content-between">
+        <div>
+          <div class="stat-icon primary mx-auto mb-4" style="width: 64px; height: 64px; font-size: 1.75rem;">
+            <i class="bi bi-building"></i>
+          </div>
+          <h4 class="fw-bold mb-2">I am a Recruiter / Employer</h4>
+          <p class="text-muted small mb-4">
+            Register your organization, post job requisitions, screen applicant pools, and rank candidates using AI heuristics.
+          </p>
+          <ul class="list-unstyled text-start small text-muted mb-4">
+            <li class="mb-2"><i class="bi bi-check2-circle text-primary me-2"></i>Organization workspace management</li>
+            <li class="mb-2"><i class="bi bi-check2-circle text-primary me-2"></i>Multi-user recruiting team roles</li>
+            <li class="mb-2"><i class="bi bi-check2-circle text-primary me-2"></i>Candidate screening and scoring pipelines</li>
+          </ul>
+        </div>
+        <a href="{{ url_for('auth.register_recruiter') }}" class="btn btn-accent-enterprise w-100 py-2">
+          Sign Up as Recruiter <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center mt-5">
+    <p class="text-muted small">Already have an account? <a href="{{ url_for('auth.login') }}" class="text-primary fw-semibold">Sign in here</a></p>
+  </div>
+</div>
+{% endblock %}

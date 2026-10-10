@@ -1,0 +1,111 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Evaluation Review - {{ interview.round_name }} - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4" style="max-width: 900px;">
+  <div class="mb-4 pb-2 border-bottom">
+    <a href="{{ url_for('interviews.detail', interview_id=interview.id) }}" class="text-decoration-none small text-muted mb-2 d-inline-block">
+      <i class="bi bi-arrow-left me-1"></i>Back to Interview Details
+    </a>
+    <h3 class="fw-bold mb-1">Interviewer Evaluation Review</h3>
+    <p class="text-muted small mb-0">Detailed rubric evaluation submitted by {{ feedback.interviewer.full_name }}.</p>
+  </div>
+
+  <!-- Header Card -->
+  <div class="card-enterprise p-4 mb-4">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+      <div>
+        <h5 class="fw-bold mb-1">{{ interview.application.candidate_user.full_name }}</h5>
+        <div class="small text-muted">
+          <span>Role: <strong>{{ interview.application.job.title }}</strong></span>
+          <span class="mx-2">&bull;</span>
+          <span>Round: <strong>{{ interview.round_name }}</strong></span>
+        </div>
+      </div>
+      <div>
+        <span class="badge {% if 'hire' in feedback.overall_recommendation and 'no' not in feedback.overall_recommendation %}bg-success text-white{% elif 'no_hire' in feedback.overall_recommendation %}bg-danger text-white{% else %}bg-secondary text-white{% endif %} fs-6 px-3 py-2">
+          {{ feedback.overall_recommendation.replace('_', ' ')|capitalize }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scores Grid -->
+  <div class="card-enterprise p-4 mb-4">
+    <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-bar-chart me-2"></i>Competency Ratings</h6>
+    <div class="row g-3 text-center">
+      <div class="col-6 col-md-3">
+        <div class="p-3 border rounded bg-light">
+          <span class="text-muted small d-block">Technical</span>
+          <span class="fw-bold fs-5 text-dark">{{ feedback.technical_rating or '-' }}/5</span>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="p-3 border rounded bg-light">
+          <span class="text-muted small d-block">Problem Solving</span>
+          <span class="fw-bold fs-5 text-dark">{{ feedback.problem_solving_rating or '-' }}/5</span>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="p-3 border rounded bg-light">
+          <span class="text-muted small d-block">Communication</span>
+          <span class="fw-bold fs-5 text-dark">{{ feedback.communication_rating or '-' }}/5</span>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="p-3 border rounded bg-light">
+          <span class="text-muted small d-block">Role Relevant</span>
+          <span class="fw-bold fs-5 text-dark">{{ feedback.role_relevant_rating or '-' }}/5</span>
+        </div>
+      </div>
+    </div>
+
+    {% if feedback.overall_score %}
+      <div class="mt-3 text-center text-muted small">
+        Calculated Mean Score: <strong>{{ feedback.overall_score }} / 5.0</strong>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Observations -->
+  <div class="card-enterprise p-4 mb-4">
+    <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-chat-square-text me-2"></i>Evaluator Observations</h6>
+
+    {% if feedback.strengths %}
+      <div class="mb-4">
+        <label class="fw-bold small text-success d-block mb-1"><i class="bi bi-check-circle me-1"></i>Key Strengths</label>
+        <p class="text-secondary small mb-0 lh-base bg-light p-3 rounded" style="white-space: pre-line;">{{ feedback.strengths }}</p>
+      </div>
+    {% endif %}
+
+    {% if feedback.areas_for_improvement %}
+      <div class="mb-4">
+        <label class="fw-bold small text-warning-emphasis d-block mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Areas for Improvement</label>
+        <p class="text-secondary small mb-0 lh-base bg-light p-3 rounded" style="white-space: pre-line;">{{ feedback.areas_for_improvement }}</p>
+      </div>
+    {% endif %}
+
+    {% if feedback.notes %}
+      <div class="mb-4">
+        <label class="fw-bold small text-danger d-block mb-1"><i class="bi bi-shield-lock me-1"></i>Confidential Internal Notes</label>
+        <p class="text-secondary small mb-0 lh-base bg-light p-3 rounded border border-danger-subtle" style="white-space: pre-line;">{{ feedback.notes }}</p>
+      </div>
+    {% endif %}
+
+    {% if feedback.candidate_feedback %}
+      <div>
+        <label class="fw-bold small text-primary d-block mb-1">
+          <i class="bi bi-megaphone me-1"></i>Candidate-Facing Guidance
+          {% if feedback.is_candidate_facing %}
+            <span class="badge bg-success-subtle text-success ms-1">Published to Candidate</span>
+          {% else %}
+            <span class="badge bg-secondary-subtle text-secondary ms-1">Unpublished</span>
+          {% endif %}
+        </label>
+        <p class="text-secondary small mb-0 lh-base bg-light p-3 rounded" style="white-space: pre-line;">{{ feedback.candidate_feedback }}</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

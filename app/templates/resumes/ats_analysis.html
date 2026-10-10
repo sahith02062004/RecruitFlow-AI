@@ -1,0 +1,244 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}ATS Resume Analysis - {{ resume.original_filename }} - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <!-- Breadcrumb & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom gap-3">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1 small">
+          <li class="breadcrumb-item"><a href="{{ url_for('resumes.index') }}" class="text-decoration-none">Resumes</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}" class="text-decoration-none">{{ resume.original_filename }}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">ATS Analysis</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0">
+        <i class="bi bi-file-earmark-check text-primary me-2"></i>ATS Resume Quality &amp; Readability Analysis
+      </h3>
+      <span class="text-muted small">
+        Analyzer Version {{ analysis.analyzer_version }} &bull; Calculated {{ analysis.updated_at.strftime('%Y-%m-%d %H:%M UTC') }}
+      </span>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="POST" action="{{ url_for('resumes.analyze', resume_id=resume.id) }}" class="m-0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if selected_job %}
+          <input type="hidden" name="job_id" value="{{ selected_job.id }}">
+        {% endif %}
+        <button type="submit" class="btn btn-outline-enterprise">
+          <i class="bi bi-arrow-clockwise me-1"></i> Recalculate
+        </button>
+      </form>
+      <a href="{{ url_for('resumes.improvements', resume_id=resume.id, job_id=selected_job.id if selected_job else None) }}" class="btn btn-primary-enterprise">
+        <i class="bi bi-magic me-1"></i> Improvement Assistant
+      </a>
+    </div>
+  </div>
+
+  <!-- Parsing Warnings (e.g. Scanned PDF or Encoding issues) -->
+  {% if analysis.get_parsing_warnings() %}
+    <div class="alert alert-warning shadow-sm border-warning mb-4" role="alert">
+      <div class="d-flex align-items-center mb-1">
+        <i class="bi bi-exclamation-triangle-fill fs-5 me-2 text-warning"></i>
+        <strong class="fs-6">ATS Ingestion Warnings Detected</strong>
+      </div>
+      <ul class="mb-0 ps-3 small">
+        {% for warning in analysis.get_parsing_warnings() %}
+          <li>{{ warning }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <!-- Top KPI Score Cards (Dual Distinct Scores) -->
+  <div class="row g-4 mb-4">
+    <!-- Score A: Resume Quality / ATS Readability Score -->
+    <div class="col-lg-6">
+      <div class="card-enterprise p-4 h-100 border-start border-4 border-primary">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="badge bg-primary-subtle text-primary mb-1">Score A &bull; Objective Quality</span>
+            <h5 class="fw-bold mb-0">Resume ATS Readability Score</h5>
+            <p class="text-muted small mb-0">Structural health, section completeness &amp; machine parsing clarity.</p>
+          </div>
+          <div class="text-end">
+            <span class="display-5 fw-bold text-primary">
+              {{ analysis.resume_quality_score or 0.0 }}%
+            </span>
+          </div>
+        </div>
+
+        <div class="progress my-3" style="height: 10px;">
+          <div class="progress-bar bg-primary" role="progressbar" style="width: {{ analysis.resume_quality_score or 0.0 }}%;" aria-valuenow="{{ analysis.resume_quality_score or 0.0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+
+        <p class="text-muted small mb-0 fst-italic">
+          <i class="bi bi-info-circle me-1"></i>
+          Evaluates how cleanly applicant tracking software extracts your contact info, skills, and experience. Not a hiring probability guarantee.
+        </p>
+      </div>
+    </div>
+
+    <!-- Score B: Job-Specific Match Score -->
+    <div class="col-lg-6">
+      <div class="card-enterprise p-4 h-100 border-start border-4 border-info">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="badge bg-info-subtle text-info mb-1">Score B &bull; Job Alignment</span>
+            <h5 class="fw-bold mb-0">Job-Specific Match Score</h5>
+            <p class="text-muted small mb-0">Evaluated against target job requirements (Phase 5 Engine).</p>
+          </div>
+          <div class="text-end">
+            {% if selected_job and analysis.job_match_score is not none %}
+              <span class="display-5 fw-bold text-info">
+                {{ analysis.job_match_score }}%
+              </span>
+            {% else %}
+              <span class="badge bg-secondary fs-6 mt-2">No Job Selected</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Job Selection Form -->
+        <form method="GET" action="{{ url_for('resumes.analyze', resume_id=resume.id) }}" class="mt-3">
+          <div class="input-group input-group-sm">
+            <label class="input-group-text bg-light text-muted" for="jobSelect"><i class="bi bi-briefcase me-1"></i>Target Job</label>
+            <select name="job_id" id="jobSelect" class="form-select" onchange="this.form.submit()">
+              <option value="">-- Select a Requisition to Match --</option>
+              {% for j in available_jobs %}
+                <option value="{{ j.id }}" {% if selected_job and selected_job.id == j.id %}selected{% endif %}>
+                  {{ j.title }} ({{ j.organization.name if j.organization else 'General' }})
+                </option>
+              {% endfor %}
+            </select>
+            {% if selected_job %}
+              <a href="{{ url_for('resumes.compare', resume_id=resume.id, job_id=selected_job.id) }}" class="btn btn-outline-info">
+                Compare &rarr;
+              </a>
+            {% endif %}
+          </div>
+        </form>
+
+        <p class="text-muted small mt-2 mb-0 fst-italic">
+          Kept strictly separate from Document Quality score. Powered by deterministic required/preferred skill matching.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Categories Breakdown -->
+  <div class="row g-4 mb-4">
+    <!-- Category Breakdown Table -->
+    <div class="col-lg-7">
+      <div class="card-enterprise p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <h5 class="fw-bold mb-0">
+            <i class="bi bi-ui-checks-grid text-primary me-2"></i>ATS Scoring Category Weights &amp; Performance
+          </h5>
+          <span class="badge bg-light text-dark border">Weights Total: 100%</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-enterprise align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th class="text-center">Weight</th>
+                <th style="width: 35%;">Score</th>
+                <th class="text-end">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set weights = analysis.get_category_weights() %}
+              {% set scores = analysis.get_category_scores() %}
+              {% for cat_key, weight in weights.items() %}
+                {% set cat_score = scores.get(cat_key, 0.0) %}
+                <tr>
+                  <td class="fw-semibold text-capitalize">
+                    {{ cat_key.replace('_', ' ') }}
+                  </td>
+                  <td class="text-center text-muted small">
+                    {{ (weight * 100)|int }}%
+                  </td>
+                  <td>
+                    <div class="progress" style="height: 6px;">
+                      <div class="progress-bar bg-{{ 'success' if cat_score >= 80 else ('warning' if cat_score >= 50 else 'danger') }}" style="width: {{ cat_score }}%;"></div>
+                    </div>
+                  </td>
+                  <td class="text-end fw-bold {{ 'text-success' if cat_score >= 80 else ('text-warning' if cat_score >= 50 else 'text-danger') }}">
+                    {{ cat_score }}%
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Positive Findings -->
+    <div class="col-lg-5">
+      <div class="card-enterprise p-4 h-100">
+        <h5 class="fw-bold mb-3 pb-2 border-bottom">
+          <i class="bi bi-check-circle-fill text-success me-2"></i>Positive ATS Indicators
+        </h5>
+        {% if analysis.get_positive_findings() %}
+          <ul class="list-group list-group-flush small">
+            {% for finding in analysis.get_positive_findings() %}
+              <li class="list-group-item d-flex align-items-start px-0 py-2">
+                <i class="bi bi-check2 text-success fs-6 me-2 mt-1"></i>
+                <span>{{ finding }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted small fst-italic">No positive parsing indicators detected yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Detected Issues & Actionable Advice -->
+  <div class="card-enterprise p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+      <h5 class="fw-bold mb-0">
+        <i class="bi bi-shield-exclamation text-danger me-2"></i>Detected Resume Issues &amp; ATS Optimization Tips
+      </h5>
+      <span class="badge bg-danger-subtle text-danger">{{ analysis.get_detected_issues()|length }} Detected</span>
+    </div>
+
+    {% if analysis.get_detected_issues() %}
+      <div class="row g-3">
+        {% for issue in analysis.get_detected_issues() %}
+          <div class="col-md-6">
+            <div class="p-3 rounded-3 border bg-light h-100">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="fw-bold mb-0">{{ issue.title }}</h6>
+                <span class="badge bg-{{ 'danger' if issue.severity == 'high' else ('warning text-dark' if issue.severity == 'medium' else 'secondary') }} text-uppercase" style="font-size: 0.65rem;">
+                  {{ issue.severity }} Priority
+                </span>
+              </div>
+              <div class="small text-muted mb-2">
+                <strong>Evidence:</strong> <code>{{ issue.evidence }}</code>
+              </div>
+              <p class="small text-secondary mb-2">
+                <strong>Why it matters:</strong> {{ issue.why_it_matters }}
+              </p>
+              <div class="p-2 rounded bg-white border text-primary small">
+                <i class="bi bi-lightbulb me-1"></i><strong>Recommended action:</strong> {{ issue.suggestion }}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-success mb-0 small">
+        <i class="bi bi-stars me-1"></i> Outstanding! No critical parsing or structural issues were detected in this resume document.
+      </p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

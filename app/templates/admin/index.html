@@ -1,0 +1,55 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Administration - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <div>
+      <h3 class="fw-bold mb-1">Platform Administration</h3>
+      <p class="text-muted small mb-0">User accounts, roles, access controls, and system state.</p>
+    </div>
+  </div>
+
+  <div class="card-enterprise">
+    <div class="card-header-clean">
+      <h6 class="fw-semibold mb-0">Registered User Accounts</h6>
+      <span class="badge bg-primary-subtle text-primary">{{ users|length }} Total</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-enterprise">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Registered</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td class="fw-semibold">{{ u.full_name }}</td>
+            <td>{{ u.email }}</td>
+            <td><span class="badge bg-secondary-subtle text-secondary">{{ u.role|capitalize }}</span></td>
+            <td>
+              {% if u.is_active %}
+                <span class="badge bg-success-subtle text-success">Active</span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger">Inactive</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">No users found in database.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

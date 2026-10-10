@@ -1,0 +1,287 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ interview.round_name }} - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4" style="max-width: 1000px;">
+  <!-- Back button -->
+  <div class="mb-3">
+    {% if is_candidate_owner %}
+      <a href="{{ url_for('interviews.my_interviews') }}" class="text-decoration-none small text-muted">
+        <i class="bi bi-arrow-left me-1"></i>Back to My Interviews
+      </a>
+    {% else %}
+      <a href="{{ url_for('interviews.index') }}" class="text-decoration-none small text-muted">
+        <i class="bi bi-arrow-left me-1"></i>Back to Interview Coordination
+      </a>
+    {% endif %}
+  </div>
+
+  <!-- Header Banner -->
+  <div class="card-enterprise p-4 mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <h4 class="fw-bold mb-0">{{ interview.round_name }}</h4>
+          <span class="badge {% if interview.status == 'completed' %}bg-success-subtle text-success border border-success-subtle{% elif interview.status == 'scheduled' %}bg-primary-subtle text-primary border border-primary-subtle{% elif interview.status == 'cancelled' %}bg-danger-subtle text-danger border border-danger-subtle{% else %}bg-secondary-subtle text-secondary border{% endif %}">
+            {{ interview.status.replace('_', ' ')|capitalize }}
+          </span>
+          <span class="badge bg-light text-secondary border">
+            <i class="bi {% if interview.interview_type == 'online' %}bi-camera-video{% elif interview.interview_type == 'phone' %}bi-telephone{% else %}bi-building{% endif %} me-1"></i>
+            {{ interview.interview_type|capitalize }}
+          </span>
+        </div>
+        <p class="text-muted small mb-0">
+          Position: <strong>{{ application.job.title }}</strong> &bull; Organization: <strong>{{ application.job.organization.name }}</strong>
+        </p>
+      </div>
+
+      <!-- Action buttons for recruiters and interviewers -->
+      <div class="d-flex flex-wrap gap-2">
+        {% if is_recruiter and interview.status == 'scheduled' %}
+          <a href="{{ url_for('interviews.reschedule', interview_id=interview.id) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-calendar-event me-1"></i>Reschedule
+          </a>
+          <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#cancelModal">
+            <i class="bi bi-x-circle me-1"></i>Cancel
+          </button>
+          <div class="dropdown">
+            <button class="btn btn-outline-enterprise btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              Status
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+              <li>
+                <form method="POST" action="{{ url_for('interviews.update_status', interview_id=interview.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="status" value="completed">
+                  <button type="submit" class="dropdown-item text-success"><i class="bi bi-check2-circle me-2"></i>Mark Completed</button>
+                </form>
+              </li>
+              <li>
+                <form method="POST" action="{{ url_for('interviews.update_status', interview_id=interview.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="status" value="no_show">
+                  <button type="submit" class="dropdown-item text-warning"><i class="bi bi-person-x me-2"></i>Record No-Show</button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        {% endif %}
+
+        {% if (is_assigned or is_recruiter) and interview.status != 'cancelled' %}
+          <a href="{{ url_for('interviews.feedback', interview_id=interview.id) }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-pencil-square me-1"></i>
+            {% if user_feedback %}Edit Feedback{% else %}Submit Feedback{% endif %}
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Cancellation Notice if Cancelled -->
+  {% if interview.status == 'cancelled' %}
+    <div class="alert alert-danger border-danger-subtle d-flex align-items-center mb-4 p-3 rounded-3" role="alert">
+      <i class="bi bi-x-octagon-fill fs-5 text-danger me-3"></i>
+      <div>
+        <strong>Interview Cancelled:</strong> {{ interview.cancellation_reason or 'No cancellation reason provided.' }}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Grid: Timing and Logistics -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-6">
+      <div class="card-enterprise p-4 h-100">
+        <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-clock-history me-2"></i>Schedule &amp; Timing</h6>
+        <div class="mb-3">
+          <span class="text-muted small d-block">Scheduled Date</span>
+          <span class="fw-bold fs-6">{{ interview.scheduled_at.strftime('%A, %B %d, %Y') }}</span>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <span class="text-muted small d-block">Start Time</span>
+            <span class="fw-bold">{{ interview.scheduled_at.strftime('%H:%M') }} ({{ interview.timezone }})</span>
+          </div>
+          <div class="col-6">
+            <span class="text-muted small d-block">End Time</span>
+            <span class="fw-bold">
+              {% if interview.end_time %}{{ interview.end_time.strftime('%H:%M') }} ({{ interview.timezone }}){% else %}&mdash;{% endif %}
+            </span>
+          </div>
+        </div>
+        <div>
+          <span class="text-muted small d-block">Candidate</span>
+          <span class="fw-semibold">{{ application.candidate_user.full_name }}</span>
+          {% if not is_candidate_owner %}
+            <span class="text-muted small d-block">{{ application.candidate_user.email }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card-enterprise p-4 h-100">
+        <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-geo-alt me-2"></i>Access &amp; Location</h6>
+        {% if interview.interview_type in ('online', 'technical', 'cultural', 'hr') %}
+          <div class="mb-3">
+            <span class="text-muted small d-block">Video Meeting Link</span>
+            {% if interview.meeting_link %}
+              <div class="mt-2">
+                <a href="{{ interview.meeting_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
+                  <i class="bi bi-camera-video me-1"></i>Join Video Call
+                </a>
+              </div>
+              <small class="text-muted d-block mt-2 font-monospace text-truncate">{{ interview.meeting_link }}</small>
+            {% else %}
+              <span class="text-muted fst-italic">Meeting link pending provision</span>
+            {% endif %}
+          </div>
+        {% elif interview.interview_type == 'in_person' %}
+          <div class="mb-3">
+            <span class="text-muted small d-block">Physical Location</span>
+            <span class="fw-semibold">{{ interview.location or 'Onsite address pending confirmation' }}</span>
+          </div>
+        {% else %}
+          <div class="mb-3">
+            <span class="text-muted small d-block">Format Notes</span>
+            <span class="fw-semibold">Phone screening call with candidate</span>
+          </div>
+        {% endif %}
+
+        {% if not is_candidate_owner %}
+          <div>
+            <span class="text-muted small d-block">Assigned Interviewers</span>
+            <span class="fw-semibold">{{ interview.interviewer_name }}</span>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Candidate Instructions -->
+  {% if interview.instructions %}
+    <div class="card-enterprise p-4 mb-4">
+      <h6 class="fw-bold mb-2"><i class="bi bi-info-circle me-2 text-primary"></i>Preparation Guidance &amp; Instructions</h6>
+      <p class="text-secondary small mb-0 lh-base" style="white-space: pre-line;">{{ interview.instructions }}</p>
+    </div>
+  {% endif %}
+
+  <!-- Evaluation Feedback Section -->
+  <div class="card-enterprise p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+      <h6 class="fw-bold mb-0">
+        {% if is_candidate_owner %}
+          <i class="bi bi-chat-left-text me-2 text-primary"></i>Interview Summary &amp; Feedback
+        {% else %}
+          <i class="bi bi-clipboard-check me-2 text-primary"></i>Interviewer Evaluation Rubrics
+        {% endif %}
+      </h6>
+      {% if not is_candidate_owner and interview.average_rating %}
+        <span class="badge bg-primary-subtle text-primary fs-6">
+          Average Score: {{ interview.average_rating }}/5
+        </span>
+      {% endif %}
+    </div>
+
+    {% if is_candidate_owner %}
+      <!-- Candidate View: ONLY candidate-facing summary -->
+      {% if feedback_list %}
+        {% for fb in feedback_list %}
+          <div class="p-3 bg-light rounded-3 mb-2">
+            <div class="small text-muted mb-1">{{ fb.submitted_at }}</div>
+            <p class="mb-0 small text-dark lh-base" style="white-space: pre-line;">{{ fb.candidate_feedback }}</p>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-muted small mb-0 fst-italic">
+          Evaluation is currently in progress. Published candidate guidance will appear here following review.
+        </p>
+      {% endif %}
+
+    {% else %}
+      <!-- Recruiter & Evaluator View: Full rubrics -->
+      {% if feedback_list %}
+        <div class="table-responsive">
+          <table class="table table-enterprise align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Evaluator</th>
+                <th>Technical</th>
+                <th>Problem Solving</th>
+                <th>Communication</th>
+                <th>Recommendation</th>
+                <th>Status</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for fb in feedback_list %}
+                <tr>
+                  <td>
+                    <span class="fw-bold">{{ fb.interviewer.full_name }}</span>
+                    {% if fb.interviewer_user_id == current_user.id %}
+                      <span class="badge bg-secondary-subtle text-secondary ms-1">You</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ fb.technical_rating or '-' }}/5</td>
+                  <td>{{ fb.problem_solving_rating or '-' }}/5</td>
+                  <td>{{ fb.communication_rating or '-' }}/5</td>
+                  <td>
+                    <span class="badge {% if 'hire' in fb.overall_recommendation and 'no' not in fb.overall_recommendation %}bg-success-subtle text-success border border-success-subtle{% elif 'no_hire' in fb.overall_recommendation %}bg-danger-subtle text-danger border border-danger-subtle{% else %}bg-secondary-subtle text-secondary border{% endif %}">
+                      {{ fb.overall_recommendation.replace('_', ' ')|capitalize }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge {% if fb.status == 'submitted' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %}">
+                      {{ fb.status|capitalize }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <a href="{{ url_for('interviews.view_feedback', interview_id=interview.id, feedback_id=fb.id) }}" class="btn btn-sm btn-outline-enterprise">
+                      Review Notes
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted small mb-0 fst-italic">
+          No feedback submitted yet. Assigned evaluators will submit ratings and notes using the evaluation rubric form.
+        </p>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<!-- Cancellation Modal for Recruiters -->
+{% if is_recruiter and cancel_form %}
+  <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="POST" action="{{ url_for('interviews.cancel', interview_id=interview.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold" id="cancelModalLabel">Cancel Interview Session</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted mb-3">
+              This action will mark the session as cancelled and send an automated in-app notification to the candidate.
+            </p>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">{{ cancel_form.cancellation_reason.label.text }} <span class="text-danger">*</span></label>
+              {{ cancel_form.cancellation_reason(class="form-control", rows=3, placeholder="e.g. Scheduling conflict, requisition filled, candidate requested postponement") }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Keep Scheduled</button>
+            {{ cancel_form.submit(class="btn btn-danger btn-sm") }}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

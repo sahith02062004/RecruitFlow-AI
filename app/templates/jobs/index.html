@@ -1,0 +1,134 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}Job Openings - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <!-- Search and Header Banner -->
+  <div class="card-enterprise p-4 mb-4 bg-white">
+    <div class="row align-items-center g-3">
+      <div class="col-lg-6">
+        <h3 class="fw-bold mb-1">Explore Open Requisitions</h3>
+        <p class="text-muted small mb-0">Search published positions, filter by department, work style, or skill criteria.</p>
+      </div>
+      <div class="col-lg-6 text-lg-end">
+        {% if is_recruiter %}
+          <a href="{{ url_for('jobs.create') }}" class="btn btn-primary-enterprise">
+            <i class="bi bi-plus-lg me-1"></i> Post New Job Requisition
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Search & Filter Form -->
+    <form method="GET" action="{{ url_for('jobs.index') }}" class="mt-4 pt-3 border-top">
+      <div class="row g-2">
+        <div class="col-md-5">
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" name="q" class="form-control border-start-0" placeholder="Search by title, skills, or location..." value="{{ search_query }}">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <select name="workplace" class="form-select">
+            <option value="">All Workplace Types</option>
+            <option value="remote" {% if selected_workplace == 'remote' %}selected{% endif %}>Remote</option>
+            <option value="hybrid" {% if selected_workplace == 'hybrid' %}selected{% endif %}>Hybrid</option>
+            <option value="onsite" {% if selected_workplace == 'onsite' %}selected{% endif %}>On-site</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select name="employment" class="form-select">
+            <option value="">All Types</option>
+            <option value="full-time" {% if selected_employment == 'full-time' %}selected{% endif %}>Full-time</option>
+            <option value="contract" {% if selected_employment == 'contract' %}selected{% endif %}>Contract</option>
+            <option value="part-time" {% if selected_employment == 'part-time' %}selected{% endif %}>Part-time</option>
+            <option value="internship" {% if selected_employment == 'internship' %}selected{% endif %}>Internship</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary-enterprise flex-grow-1">Filter</button>
+          <a href="{{ url_for('jobs.index') }}" class="btn btn-outline-enterprise">Reset</a>
+        </div>
+      </div>
+
+      {% if is_recruiter %}
+        <div class="d-flex gap-2 mt-3 align-items-center">
+          <span class="small fw-semibold text-muted me-1">Status Filter:</span>
+          <a href="{{ url_for('jobs.index') }}" class="btn btn-sm {% if not status_filter %}btn-primary-enterprise{% else %}btn-outline-enterprise{% endif %}">All</a>
+          <a href="{{ url_for('jobs.index', status='published') }}" class="btn btn-sm {% if status_filter == 'published' %}btn-primary-enterprise{% else %}btn-outline-enterprise{% endif %}">Published</a>
+          <a href="{{ url_for('jobs.index', status='draft') }}" class="btn btn-sm {% if status_filter == 'draft' %}btn-primary-enterprise{% else %}btn-outline-enterprise{% endif %}">Draft</a>
+          <a href="{{ url_for('jobs.index', status='closed') }}" class="btn btn-sm {% if status_filter == 'closed' %}btn-primary-enterprise{% else %}btn-outline-enterprise{% endif %}">Closed</a>
+        </div>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Job Listings Result -->
+  <div class="card-enterprise">
+    <div class="card-header-clean">
+      <h6 class="fw-semibold mb-0">Open Job Postings</h6>
+      <span class="text-muted small">{{ jobs|length }} Available Roles</span>
+    </div>
+
+    {% if jobs %}
+      <div class="table-responsive">
+        <table class="table table-enterprise">
+          <thead>
+            <tr>
+              <th>Job Requisition</th>
+              <th>Organization</th>
+              <th>Location &amp; Work Style</th>
+              <th>Experience</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in jobs %}
+            <tr>
+              <td>
+                <a href="{{ url_for('jobs.detail', job_id=job.id) }}" class="fw-bold text-decoration-none text-dark d-block">
+                  {{ job.title }}
+                </a>
+                <span class="text-muted small">{{ job.department or 'General' }} &bull; {{ job.employment_type|capitalize }}</span>
+              </td>
+              <td>
+                <span class="fw-medium text-secondary">{{ job.organization.name if job.organization else 'RecruitFlow Team' }}</span>
+              </td>
+              <td>
+                <div><i class="bi bi-geo-alt me-1 text-muted"></i>{{ job.location or 'Multiple Locations' }}</div>
+                <span class="badge bg-light text-dark border small">{{ job.workplace_type|capitalize }}</span>
+              </td>
+              <td>
+                <span class="small text-muted">{{ job.minimum_experience_years }} - {{ job.maximum_experience_years or '+' }} yrs</span>
+              </td>
+              <td>
+                <span class="badge-status {{ job.status }}">{{ job.status|capitalize }}</span>
+              </td>
+              <td>
+                <a href="{{ url_for('jobs.detail', job_id=job.id) }}" class="btn btn-sm btn-outline-enterprise">
+                  View Details
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-4">
+        {{ empty.render_empty_state(
+          icon='bi-briefcase',
+          title='No matching job postings found',
+          description='Try adjusting your search criteria or filter keywords.',
+          action_url=url_for('jobs.index'),
+          action_text='Clear Filters',
+          action_icon='bi-arrow-repeat'
+        ) }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

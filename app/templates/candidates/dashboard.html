@@ -1,0 +1,273 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}Candidate Dashboard - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <!-- Page Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom gap-2">
+    <div>
+      <h3 class="fw-bold mb-1">Welcome, {{ current_user.full_name }}</h3>
+      <p class="text-muted small mb-0">Candidate talent portal, ATS resume analytics, and application tracking.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('candidates.profile') }}" class="btn btn-outline-enterprise">
+        <i class="bi bi-person-lines-fill me-1"></i> Edit Profile
+      </a>
+      <a href="{{ url_for('jobs.index') }}" class="btn btn-primary-enterprise">
+        <i class="bi bi-search me-1"></i> Explore Opportunities
+      </a>
+    </div>
+  </div>
+
+  <!-- Top Metrics: Profile Strength & ATS Resume Quality -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-6">
+      <div class="card-enterprise p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="fw-semibold"><i class="bi bi-person-check text-primary me-2"></i>Profile Strength</div>
+          <span class="badge bg-primary-subtle text-primary">{{ completion_pct }}% Complete</span>
+        </div>
+        <div class="progress" style="height: 8px;">
+          <div class="progress-bar bg-primary" role="progressbar" style="width: {{ completion_pct }}%;" aria-valuenow="{{ completion_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <div class="mt-2 text-muted small">
+          Add headline, verified skills, and portfolio links to improve matching accuracy.
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card-enterprise p-4 h-100 border-start border-4 border-info">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <div class="fw-semibold"><i class="bi bi-file-earmark-check text-info me-2"></i>ATS Resume Quality Score</div>
+            <span class="text-muted small">Objective parsing &amp; formatting readability</span>
+          </div>
+          {% if latest_analysis %}
+            <span class="display-6 fw-bold text-info">{{ latest_analysis.resume_quality_score or 0.0 }}%</span>
+          {% else %}
+            <span class="badge bg-secondary-subtle text-secondary">Not Analyzed</span>
+          {% endif %}
+        </div>
+        {% if primary_resume %}
+          <div class="d-flex gap-2 mt-2">
+            <a href="{{ url_for('resumes.analyze', resume_id=primary_resume.id) }}" class="btn btn-sm btn-outline-info">
+              <i class="bi bi-bar-chart me-1"></i> View Breakdown
+            </a>
+            <a href="{{ url_for('resumes.improvements', resume_id=primary_resume.id) }}" class="btn btn-sm btn-outline-enterprise">
+              <i class="bi bi-magic me-1"></i> Improvements
+            </a>
+            <a href="{{ url_for('resumes.compare', resume_id=primary_resume.id) }}" class="btn btn-sm btn-outline-enterprise">
+              <i class="bi bi-layout-split me-1"></i> Compare Job
+            </a>
+          </div>
+        {% else %}
+          <div class="mt-2 text-muted small">
+            <a href="{{ url_for('resumes.upload') }}" class="text-decoration-none">Upload a resume</a> to calculate your ATS readability score.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <!-- Active Applications -->
+    <div class="col-lg-8">
+      <div class="card-enterprise h-100">
+        <div class="card-header-clean">
+          <div>
+            <h6 class="fw-semibold mb-0">My Applications</h6>
+            <span class="text-muted small">Real-time status of your job applications</span>
+          </div>
+          <span class="badge bg-light text-dark border">{{ applications|length }} Total</span>
+        </div>
+        <div class="p-0">
+          {% if applications %}
+            <div class="table-responsive">
+              <table class="table table-enterprise align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Job Title</th>
+                    <th>Company</th>
+                    <th>Stage</th>
+                    <th>Match Score</th>
+                    <th>Applied</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for app in applications %}
+                  <tr>
+                    <td class="fw-semibold">
+                      <a href="{{ url_for('applications.detail', application_id=app.id) }}" class="text-decoration-none text-dark">
+                        {{ app.job.title }}
+                      </a>
+                    </td>
+                    <td>{{ app.job.organization.name if app.job.organization else 'RecruitFlow Team' }}</td>
+                    <td><span class="badge-status pending">{{ app.stage|replace('_', ' ')|capitalize }}</span></td>
+                    <td class="fw-bold text-primary">{{ app.match_score }}%</td>
+                    <td class="text-muted small">{{ app.applied_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="text-end">
+                      <a href="{{ url_for('applications.detail', application_id=app.id) }}" class="btn btn-sm btn-outline-secondary py-0">Review</a>
+                      {% if primary_resume %}
+                        <a href="{{ url_for('resumes.why_not_shortlisted', resume_id=primary_resume.id, job_id=app.job_id) }}" class="btn btn-sm btn-outline-info py-0" title="Shortlisting gap explanation">
+                          <i class="bi bi-question-circle"></i> Gaps
+                        </a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="p-4">
+              {{ empty.render_empty_state(
+                icon='bi-file-earmark-person',
+                title='No applications submitted yet',
+                description='Browse open job postings and submit your profile to initiate automated AI matching.',
+                action_url=url_for('jobs.index'),
+                action_text='Browse Open Jobs',
+                action_icon='bi-briefcase'
+              ) }}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- My Resumes Card -->
+      <div class="card-enterprise mt-4">
+        <div class="card-header-clean">
+          <div>
+            <h6 class="fw-semibold mb-0">My Resumes</h6>
+            <span class="text-muted small">Uploaded documents, ATS parsing, and quality metrics</span>
+          </div>
+          <div>
+            <a href="{{ url_for('resumes.upload') }}" class="btn btn-sm btn-primary-enterprise">
+              <i class="bi bi-cloud-arrow-up me-1"></i> Upload Resume
+            </a>
+          </div>
+        </div>
+        <div class="p-0">
+          {% if resumes %}
+            <div class="table-responsive">
+              <table class="table table-enterprise align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Document</th>
+                    <th>Status</th>
+                    <th>Extracted Skills</th>
+                    <th>Uploaded</th>
+                    <th class="text-end">ATS Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in resumes %}
+                  <tr>
+                    <td class="fw-medium">
+                      <i class="bi bi-file-earmark-{{ 'pdf text-danger' if r.file_type == 'pdf' else 'word text-primary' }} me-1"></i>
+                      <a href="{{ url_for('resumes.detail', resume_id=r.id) }}" class="text-dark text-decoration-none">{{ r.original_filename }}</a>
+                    </td>
+                    <td>
+                      <span class="badge bg-{{ 'success' if r.processing_status == 'processed' else ('warning' if r.processing_status == 'processing' else 'danger') }}-subtle text-{{ 'success' if r.processing_status == 'processed' else ('warning' if r.processing_status == 'processing' else 'danger') }}">
+                        {{ r.processing_status|capitalize }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge bg-primary-subtle text-primary">{{ r.skills_list|length }} skills</span>
+                    </td>
+                    <td class="text-muted small">{{ r.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="text-end">
+                      <a href="{{ url_for('resumes.analyze', resume_id=r.id) }}" class="btn btn-sm btn-outline-info py-0">ATS Score</a>
+                      <a href="{{ url_for('resumes.improvements', resume_id=r.id) }}" class="btn btn-sm btn-outline-enterprise py-0">Improve</a>
+                      <a href="{{ url_for('resumes.compare', resume_id=r.id) }}" class="btn btn-sm btn-outline-secondary py-0">Compare</a>
+                      <a href="{{ url_for('resumes.download', resume_id=r.id) }}" class="btn btn-sm btn-outline-secondary py-0" title="Download"><i class="bi bi-download"></i></a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="p-4 text-center">
+              <p class="text-muted small mb-2">No resume document uploaded yet.</p>
+              <a href="{{ url_for('resumes.upload') }}" class="btn btn-sm btn-outline-enterprise">Upload your resume</a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Candidate Profile Summary Card -->
+    <div class="col-lg-4">
+      <div class="card-enterprise p-4 mb-4">
+        <h6 class="fw-semibold mb-3">Profile Overview</h6>
+        <div class="text-center mb-3">
+          <div class="stat-icon teal mx-auto mb-2" style="width: 56px; height: 56px; font-size: 1.5rem;">
+            <i class="bi bi-person"></i>
+          </div>
+          <h5 class="fw-bold mb-0">{{ current_user.full_name }}</h5>
+          <p class="text-muted small mb-1">{{ profile.headline or 'Candidate' }}</p>
+          <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ profile.location or 'Location not specified' }}</span>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="mb-3">
+          <div class="fw-semibold small mb-1">Key Skills</div>
+          <div class="d-flex flex-wrap gap-1">
+            {% if profile.skills %}
+              {% for skill in profile.skills.split(',') %}
+                <span class="badge bg-light text-dark border small">{{ skill.strip() }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="text-muted small">No skills tagged yet.</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div>
+          <div class="fw-semibold small mb-1">Professional Links</div>
+          <div class="d-flex gap-2">
+            {% if profile.linkedin_url %}
+              <a href="{{ profile.linkedin_url }}" target="_blank" class="btn btn-sm btn-outline-enterprise"><i class="bi bi-linkedin"></i></a>
+            {% endif %}
+            {% if profile.github_url %}
+              <a href="{{ profile.github_url }}" target="_blank" class="btn btn-sm btn-outline-enterprise"><i class="bi bi-github"></i></a>
+            {% endif %}
+            {% if profile.portfolio_url %}
+              <a href="{{ profile.portfolio_url }}" target="_blank" class="btn btn-sm btn-outline-enterprise"><i class="bi bi-globe"></i></a>
+            {% endif %}
+            {% if not profile.linkedin_url and not profile.github_url and not profile.portfolio_url %}
+              <span class="text-muted small">No links provided.</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Job Match Card -->
+      <div class="card-enterprise p-4">
+        <h6 class="fw-bold mb-2"><i class="bi bi-briefcase text-primary me-2"></i>Recent Opportunities</h6>
+        <p class="text-muted small mb-3">Open requisitions available for application &amp; matching.</p>
+        {% if available_jobs %}
+          <div class="list-group list-group-flush small">
+            {% for j in available_jobs %}
+              <a href="{{ url_for('jobs.detail', job_id=j.id) }}" class="list-group-item list-group-item-action px-0 py-2 d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold text-dark">{{ j.title }}</div>
+                  <span class="text-muted small">{{ j.organization.name if j.organization else 'General' }}</span>
+                </div>
+                <span class="badge bg-light text-primary border">View &rarr;</span>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted small mb-0 fst-italic">No active jobs posted at this moment.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

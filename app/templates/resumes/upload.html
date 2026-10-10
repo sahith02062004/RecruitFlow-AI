@@ -1,0 +1,98 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Upload Resume - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="d-flex align-items-center mb-4">
+        <a href="{{ url_for('resumes.index') }}" class="btn btn-sm btn-outline-secondary me-3">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+          <h4 class="fw-bold mb-1">Upload Resume Document</h4>
+          <p class="text-muted small mb-0">Upload your PDF or Word resume for deterministic text extraction and profile enrichment.</p>
+        </div>
+      </div>
+
+      <div class="card-enterprise p-4 p-md-5">
+        <form method="POST" action="{{ url_for('resumes.upload') }}" enctype="multipart/form-data" id="resumeUploadForm">
+          {{ form.hidden_tag() }}
+
+          <div class="p-4 p-md-5 border rounded-3 bg-light text-center mb-4" style="border-style: dashed !important; border-width: 2px !important; border-color: #cbd5e1 !important;">
+            <div class="stat-icon primary mx-auto mb-3" style="width: 60px; height: 60px; font-size: 1.6rem;">
+              <i class="bi bi-file-earmark-arrow-up"></i>
+            </div>
+            <h5 class="fw-bold mb-1">Select Resume File</h5>
+            <p class="text-muted small mb-3">Accepted formats: <strong>PDF (.pdf)</strong> and <strong>Word (.docx)</strong> up to <strong>5 MB</strong></p>
+
+            <div class="col-md-8 mx-auto">
+              {{ form.resume_file(class="form-control mb-2" + (" is-invalid" if form.resume_file.errors else ""), id="resumeFileInput", accept=".pdf,.docx") }}
+              {% for error in form.resume_file.errors %}
+                <div class="invalid-feedback text-start">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="mt-3">
+              <span class="badge bg-light text-secondary border me-1"><i class="bi bi-shield-check text-success me-1"></i>Magic-Byte Inspected</span>
+              <span class="badge bg-light text-secondary border me-1"><i class="bi bi-lock text-primary me-1"></i>Secure Storage</span>
+              <span class="badge bg-light text-secondary border"><i class="bi bi-cpu text-info me-1"></i>PyMuPDF &amp; python-docx Engine</span>
+            </div>
+          </div>
+
+          <div class="card bg-light border-0 p-3 mb-4 rounded-3">
+            <div class="form-check">
+              {{ form.sync_profile(class="form-check-input", id="syncProfileCheck") }}
+              <label class="form-check-label fw-medium small" for="syncProfileCheck">
+                {{ form.sync_profile.label.text }}
+              </label>
+              <div class="text-muted small mt-1">
+                When enabled, newly extracted skills, phone number, website links, and experience years will automatically update your public candidate profile.
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ url_for('resumes.index') }}" class="btn btn-outline-enterprise">Cancel</a>
+            <button type="submit" class="btn btn-primary-enterprise px-4" id="uploadSubmitBtn">
+              <i class="bi bi-cloud-arrow-up me-2"></i>{{ form.submit.label.text }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Feature highlight card -->
+      <div class="row g-3 mt-3">
+        <div class="col-md-4">
+          <div class="card-enterprise p-3 h-100">
+            <div class="d-flex align-items-center mb-2">
+              <i class="bi bi-filetype-pdf text-danger fs-5 me-2"></i>
+              <h6 class="fw-semibold mb-0 small">PyMuPDF Engine</h6>
+            </div>
+            <p class="text-muted small mb-0">High-speed PDF text parsing with page inspection and scanned-image diagnostics.</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card-enterprise p-3 h-100">
+            <div class="d-flex align-items-center mb-2">
+              <i class="bi bi-filetype-docx text-primary fs-5 me-2"></i>
+              <h6 class="fw-semibold mb-0 small">python-docx Engine</h6>
+            </div>
+            <p class="text-muted small mb-0">Extracts paragraphs, formatted lists, and table grid contents from Word documents.</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card-enterprise p-3 h-100">
+            <div class="d-flex align-items-center mb-2">
+              <i class="bi bi-check-circle text-success fs-5 me-2"></i>
+              <h6 class="fw-semibold mb-0 small">Candidate Control</h6>
+            </div>
+            <p class="text-muted small mb-0">Review, edit, and correct all extracted skills and history before applying to jobs.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

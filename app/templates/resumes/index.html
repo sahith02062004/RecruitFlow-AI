@@ -1,0 +1,137 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}Resume Repository - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom gap-2">
+    <div>
+      <h3 class="fw-bold mb-1">Resume Documents</h3>
+      <p class="text-muted small mb-0">Secure resume parsing, deterministic skill taxonomy extraction, and profile synchronization.</p>
+    </div>
+    <div>
+      <a href="{{ url_for('resumes.upload') }}" class="btn btn-primary-enterprise">
+        <i class="bi bi-cloud-arrow-up me-1"></i> Upload New Resume
+      </a>
+    </div>
+  </div>
+
+  <div class="card-enterprise">
+    {% if resumes %}
+      <div class="table-responsive">
+        <table class="table table-enterprise align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Document</th>
+              <th>Candidate</th>
+              <th>Format</th>
+              <th>Processing Status</th>
+              <th>Extracted Skills</th>
+              <th>Uploaded Date</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in resumes %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center">
+                  {% if r.file_type == 'pdf' %}
+                    <i class="bi bi-file-earmark-pdf fs-4 text-danger me-2"></i>
+                  {% elif r.file_type == 'docx' %}
+                    <i class="bi bi-file-earmark-word fs-4 text-primary me-2"></i>
+                  {% else %}
+                    <i class="bi bi-file-earmark-text fs-4 text-secondary me-2"></i>
+                  {% endif %}
+                  <div>
+                    <a href="{{ url_for('resumes.detail', resume_id=r.id) }}" class="fw-semibold text-dark text-decoration-none">
+                      {{ r.original_filename }}
+                    </a>
+                    <div class="text-muted small">{{ r.file_size_formatted }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="fw-medium">
+                  {{ r.candidate_user.full_name if r.candidate_user else (r.candidate.user.full_name if r.candidate and r.candidate.user else "Candidate") }}
+                </div>
+                <div class="text-muted small">
+                  {{ r.candidate_user.email if r.candidate_user else (r.candidate.user.email if r.candidate and r.candidate.user else "") }}
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border">{{ r.file_type|upper }}</span>
+              </td>
+              <td>
+                {% if r.processing_status == 'processed' %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">
+                    <i class="bi bi-check-circle me-1"></i>Processed
+                  </span>
+                {% elif r.processing_status == 'processing' %}
+                  <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                    <i class="bi bi-hourglass-split me-1"></i>Processing
+                  </span>
+                {% elif r.processing_status == 'failed' %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Failed
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary border">
+                    {{ r.processing_status|capitalize }}
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                {% set s_list = r.skills_list %}
+                {% if s_list %}
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                    {{ s_list|length }} skills
+                  </span>
+                  <span class="text-muted small ms-1">
+                    ({{ s_list[:3]|join(', ') }}{% if s_list|length > 3 %}...{% endif %})
+                  </span>
+                {% else %}
+                  <span class="text-muted small">None detected</span>
+                {% endif %}
+              </td>
+              <td class="text-muted small">
+                {{ r.created_at.strftime('%b %d, %Y') if r.created_at else '' }}
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{{ url_for('resumes.detail', resume_id=r.id) }}" class="btn btn-outline-secondary" title="View Extracted Details">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="{{ url_for('resumes.download', resume_id=r.id) }}" class="btn btn-outline-secondary" title="Download Document">
+                    <i class="bi bi-download"></i>
+                  </a>
+                  {% if r.candidate_user_id == current_user.id or current_user.role == 'platform_admin' %}
+                    <form method="POST" action="{{ url_for('resumes.delete', resume_id=r.id) }}" class="d-inline" onsubmit="return confirm('Delete this resume? This cannot be undone.');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-outline-danger" title="Delete">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-5 text-center">
+        {{ empty.render_empty_state(
+          icon='bi-file-earmark-arrow-up',
+          title='No resumes uploaded yet',
+          description='Upload a candidate resume in PDF or DOCX format to trigger automated text extraction and skills taxonomy tagging.',
+          action_url=url_for('resumes.upload'),
+          action_text='Upload Resume'
+        ) }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

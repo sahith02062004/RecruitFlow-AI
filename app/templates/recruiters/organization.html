@@ -1,0 +1,77 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ organization.name }} - Organization Workspace{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card-enterprise p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h4 class="fw-bold mb-1">{{ organization.name }}</h4>
+            <div class="text-muted small">Workspace Slug: <code>{{ organization.slug }}</code></div>
+          </div>
+          <div>
+            {% if organization.is_verified %}
+              <span class="badge bg-success-subtle text-success">Verified</span>
+            {% else %}
+              <span class="badge bg-warning-subtle text-warning">Unverified Workspace</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <hr class="my-3">
+
+        <h6 class="fw-semibold mb-3">Organization Team Members</h6>
+        <div class="table-responsive">
+          <table class="table table-enterprise">
+            <thead>
+              <tr>
+                <th>Member</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in members %}
+              <tr>
+                <td class="fw-semibold">{{ m.user.full_name }}</td>
+                <td>{{ m.user.email }}</td>
+                <td><span class="badge bg-primary-subtle text-primary">{{ m.membership_role|capitalize }}</span></td>
+                <td><span class="badge bg-success-subtle text-success">Active</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card-enterprise p-4">
+        <h6 class="fw-semibold mb-3">Workspace Details</h6>
+        <div class="d-flex justify-content-between py-2 border-bottom small">
+          <span class="text-muted">Status</span>
+          <span class="fw-semibold text-success">Active</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom small">
+          <span class="text-muted">Verification</span>
+          <span class="fw-semibold">{{ 'Verified' if organization.is_verified else 'Unverified' }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 small">
+          <span class="text-muted">Total Postings</span>
+          <span class="fw-semibold">{{ organization.jobs.count() }}</span>
+        </div>
+
+        <div class="mt-4">
+          <a href="{{ url_for('recruiters.dashboard') }}" class="btn btn-outline-enterprise w-100">
+            Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

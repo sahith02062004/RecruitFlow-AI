@@ -1,0 +1,62 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Sign In - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card-enterprise p-4 p-md-5">
+        <div class="text-center mb-4">
+          <div class="stat-icon primary mx-auto mb-3">
+            <i class="bi bi-shield-lock"></i>
+          </div>
+          <h4 class="fw-bold">Sign in to RecruitFlow AI</h4>
+          <p class="text-muted small">Enter your credentials to access the talent portal</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.login', next=request.args.get('next')) }}" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ form.email.label(class="form-label fw-semibold small") }}
+            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="name@company.com") }}
+            {% for error in form.email.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between">
+              {{ form.password.label(class="form-label fw-semibold small") }}
+              <a href="{{ url_for('auth.forgot_password') }}" class="small text-primary text-decoration-none">Forgot password?</a>
+            </div>
+            <div class="input-group">
+              {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), id="loginPasswordInput", placeholder="••••••••") }}
+              <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility('loginPasswordInput', this)">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            {% for error in form.password.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-4 form-check">
+            {{ form.remember(class="form-check-input") }}
+            {{ form.remember.label(class="form-check-label small text-muted") }}
+          </div>
+
+          <button type="submit" class="btn btn-primary-enterprise w-100 py-2">
+            Sign In
+          </button>
+        </form>
+
+        <div class="text-center mt-4 pt-3 border-top">
+          <p class="text-muted small mb-0">Don't have an account? <a href="{{ url_for('auth.register') }}" class="text-primary fw-semibold">Sign Up</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

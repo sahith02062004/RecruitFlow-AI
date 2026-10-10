@@ -1,0 +1,292 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Application Review - {{ application.candidate_user.full_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4">
+    <!-- Left Column: Application Details & Candidate Summary -->
+    <div class="col-lg-8">
+      <div class="card-enterprise p-4 p-md-5 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4 pb-3 border-bottom">
+          <div>
+            <div class="text-primary fw-semibold small mb-1">
+              Application for <a href="{{ url_for('jobs.detail', job_id=application.job.id) }}" class="text-decoration-none fw-bold">{{ application.job.title }}</a>
+            </div>
+            <h3 class="fw-bold mb-1">{{ application.candidate_user.full_name }}</h3>
+            <span class="text-muted small"><i class="bi bi-envelope me-1"></i>{{ application.candidate_user.email }} &bull; Applied {{ application.applied_at.strftime('%B %d, %Y at %H:%M') }}</span>
+          </div>
+          <div>
+            <span class="badge-status {{ 'active' if application.status in ('shortlisted', 'offered') else ('draft' if application.status == 'withdrawn' else 'pending') }} fs-6">
+              {{ application.status|capitalize }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Cover Letter / Notes -->
+        <h5 class="fw-bold mb-2">Candidate Statement &amp; Cover Letter</h5>
+        <div class="p-3 bg-light rounded-3 mb-4 border text-secondary" style="white-space: pre-line; line-height: 1.6;">
+          {{ application.cover_letter or 'No cover letter attached by applicant.' }}
+        </div>
+
+        <!-- Candidate Background -->
+        {% if application.candidate %}
+          <h5 class="fw-bold mb-2">Candidate Qualifications</h5>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <div class="p-3 border rounded bg-white">
+                <span class="text-muted small d-block">Experience</span>
+                <span class="fw-semibold">{{ application.candidate.years_of_experience }} years</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 border rounded bg-white">
+                <span class="text-muted small d-block">Location</span>
+                <span class="fw-semibold">{{ application.candidate.location or 'Not specified' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <h6 class="fw-bold mb-2 text-muted">Skills Profile</h6>
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            {% if application.candidate.skills %}
+              {% for skill in application.candidate.skills.split(',') %}
+                <span class="badge bg-light text-dark border px-3 py-2">{{ skill.strip() }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="text-muted small">No specific skills tagged.</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <!-- Attached Resume -->
+        <h5 class="fw-bold mb-2">Resume Attachment</h5>
+        {% if application.resume %}
+          <div class="d-flex flex-wrap align-items-center justify-content-between p-3 border rounded bg-light mb-4 gap-2">
+            <div class="d-flex align-items-center gap-3">
+              {% if application.resume.file_type == 'pdf' %}
+                <i class="bi bi-file-earmark-pdf text-danger display-6"></i>
+              {% elif application.resume.file_type == 'docx' %}
+                <i class="bi bi-file-earmark-word text-primary display-6"></i>
+              {% else %}
+                <i class="bi bi-file-earmark-text text-secondary display-6"></i>
+              {% endif %}
+              <div>
+                <div class="fw-semibold">{{ application.resume.original_filename }}</div>
+                <div class="text-muted small">{{ application.resume.file_size_formatted }} &bull; Status: {{ application.resume.processing_status|capitalize }}</div>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{{ url_for('resumes.detail', resume_id=application.resume.id) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-eye me-1"></i>View Extracted Details
+              </a>
+              <a href="{{ url_for('resumes.download', resume_id=application.resume.id) }}" class="btn btn-sm btn-primary-enterprise">
+                <i class="bi bi-download me-1"></i>Download File
+              </a>
+            </div>
+          </div>
+        {% else %}
+          <p class="text-muted small mb-4">No standalone document attached; profile used for submission.</p>
+        {% endif %}
+
+        <!-- Candidate Actions: Feedback & Withdraw -->
+        {% if is_owner_candidate %}
+          {% if application.rejection_feedback_published and application.rejection_reason_code %}
+            <div class="alert alert-warning border-warning shadow-sm mt-3 mb-3" role="alert">
+              <h6 class="fw-bold mb-1"><i class="bi bi-info-circle-fill me-1"></i>Official Hiring Team Feedback</h6>
+              <p class="small mb-1"><strong>Outcome Category:</strong> {{ application.rejection_reason_code.replace('_', ' ').capitalize() }}</p>
+              {% if application.rejection_reason_text %}
+                <p class="small mb-0 text-secondary">{{ application.rejection_reason_text }}</p>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <div class="pt-3 border-top d-flex justify-content-between align-items-center gap-2">
+            <div>
+              <a href="{{ url_for('applications.index') }}" class="btn btn-outline-enterprise me-2">Back to Applications</a>
+              {% if application.resume %}
+                <a href="{{ url_for('resumes.why_not_shortlisted', resume_id=application.resume.id, job_id=application.job_id) }}" class="btn btn-outline-info">
+                  <i class="bi bi-question-circle me-1"></i> Why Not Shortlisted?
+                </a>
+              {% endif %}
+            </div>
+            {% if application.status != 'withdrawn' %}
+              <form method="POST" action="{{ url_for('applications.withdraw', application_id=application.id) }}" onsubmit="return confirm('Are you sure you want to withdraw this application?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger">
+                  <i class="bi bi-x-circle me-1"></i> Withdraw Application
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Scheduled Interviews Card -->
+      <div class="card-enterprise p-4 mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <h5 class="fw-bold mb-0"><i class="bi bi-calendar-event text-primary me-2"></i>Interview Rounds</h5>
+          {% if is_authorized_recruiter and application.status not in ('withdrawn', 'rejected') %}
+            <a href="{{ url_for('interviews.schedule', application_id=application.id) }}" class="btn btn-sm btn-primary">
+              <i class="bi bi-plus-lg me-1"></i>Schedule Round
+            </a>
+          {% endif %}
+        </div>
+
+        {% if interviews %}
+          <div class="list-group list-group-flush">
+            {% for inv in interviews %}
+              <div class="list-group-item p-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                <div>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold">{{ inv.round_name }}</span>
+                    <span class="badge {% if inv.status == 'completed' %}bg-success-subtle text-success{% elif inv.status == 'scheduled' %}bg-primary-subtle text-primary{% elif inv.status == 'cancelled' %}bg-danger-subtle text-danger{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                      {{ inv.status.replace('_', ' ')|capitalize }}
+                    </span>
+                    <span class="badge bg-light text-secondary border">{{ inv.interview_type|capitalize }}</span>
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    <i class="bi bi-clock me-1"></i>{{ inv.scheduled_at.strftime('%a, %b %d, %Y at %H:%M') }} {{ inv.timezone }}
+                  </small>
+                </div>
+                <div class="d-flex gap-2">
+                  <a href="{{ url_for('interviews.detail', interview_id=inv.id) }}" class="btn btn-sm btn-outline-enterprise">
+                    View Details
+                  </a>
+                  {% if is_owner_candidate and inv.meeting_link and inv.status == 'scheduled' %}
+                    <a href="{{ inv.meeting_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary">
+                      <i class="bi bi-camera-video me-1"></i>Join
+                    </a>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted small mb-0 fst-italic">
+            No interview rounds scheduled for this candidate application yet.
+          </p>
+        {% endif %}
+      </div>
+
+      <!-- Application Stage History Timeline -->
+      <div class="card-enterprise p-4 mt-4">
+        <h5 class="fw-bold mb-3 pb-2 border-bottom"><i class="bi bi-clock-history text-primary me-2"></i>Application History Timeline</h5>
+        {% if stage_history %}
+          <div class="timeline position-relative ps-3 border-start border-2 border-primary-subtle">
+            {% for h in stage_history %}
+              <div class="mb-3 position-relative ps-3">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="badge bg-primary-subtle text-primary fw-semibold">{{ h.new_stage.replace('_', ' ')|capitalize }}</span>
+                  <small class="text-muted">{{ h.created_at.strftime('%b %d, %Y at %H:%M') }}</small>
+                </div>
+                {% if h.previous_stage %}
+                  <small class="text-muted d-block">Moved from: <em>{{ h.previous_stage.replace('_', ' ')|capitalize }}</em></small>
+                {% endif %}
+                {% if h.reason %}
+                  <p class="small text-secondary mb-0 bg-light p-2 rounded mt-1">{{ h.reason }}</p>
+                {% endif %}
+                {% if is_authorized_recruiter and h.changed_by %}
+                  <small class="text-muted d-block mt-1">Updated by: {{ h.changed_by.full_name }}</small>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted small mb-0 fst-italic">No stage changes recorded yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right Column: Status Management (Recruiter) or Requisition Info (Candidate) -->
+    <div class="col-lg-4">
+      {% if is_authorized_recruiter %}
+        <!-- AI Match Score Card -->
+        <div class="card-enterprise p-4 mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold mb-0"><i class="bi bi-stars text-primary me-1"></i>AI Match Score</h6>
+            <a href="{{ url_for('matching.explanation', application_id=application.id) }}" class="small text-decoration-none">
+              Explain Match &rarr;
+            </a>
+          </div>
+          <div class="d-flex align-items-baseline gap-2 mb-3">
+            <span class="display-6 fw-bold {% if application.match_score >= 80 %}text-success{% elif application.match_score >= 60 %}text-primary{% elif application.match_score >= 40 %}text-warning{% else %}text-secondary{% endif %}">
+              {{ application.match_score|round(1) }}%
+            </span>
+            <span class="text-muted small">Objective Alignment</span>
+          </div>
+          <a href="{{ url_for('matching.explanation', application_id=application.id) }}" class="btn btn-sm btn-outline-enterprise w-100">
+            View Transparent Breakdown
+          </a>
+        </div>
+
+        <div class="card-enterprise p-4 mb-4">
+          <h5 class="fw-bold mb-3">Recruitment Workflow</h5>
+          
+          <form method="POST" action="{{ url_for('applications.detail', application_id=application.id) }}" novalidate>
+            {{ status_form.hidden_tag() }}
+
+            <div class="mb-3">
+              {{ status_form.status.label(class="form-label fw-semibold small") }}
+              {{ status_form.status(class="form-select") }}
+            </div>
+
+            <div class="mb-3">
+              {{ status_form.notes.label(class="form-label fw-semibold small") }}
+              {{ status_form.notes(class="form-control", rows="3", placeholder="Add internal recruiter feedback, scoring insights, or interview notes...") }}
+              <div class="form-text small text-muted">Internal notes are strictly confidential and never visible to candidates.</div>
+            </div>
+
+            <!-- Structured Rejection Reason Section -->
+            <div class="p-3 mb-3 rounded bg-light border">
+              <label class="form-label fw-semibold small mb-1"><i class="bi bi-x-circle text-danger me-1"></i>Structured Rejection (Optional)</label>
+              <div class="mb-2">
+                {{ status_form.rejection_reason_code(class="form-select form-select-sm") }}
+              </div>
+              <div class="mb-2">
+                {{ status_form.rejection_reason_text(class="form-control form-control-sm", rows="2", placeholder="Candidate-facing feedback explanation...") }}
+              </div>
+              <div class="form-check">
+                {{ status_form.rejection_feedback_published(class="form-check-input", id="publishCheck") }}
+                <label class="form-check-label small" for="publishCheck">
+                  Publish this structured feedback to candidate
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary-enterprise w-100">
+              Update Status &amp; Notes
+            </button>
+          </form>
+        </div>
+      {% endif %}
+
+      <div class="card-enterprise p-4">
+        <h6 class="fw-bold mb-3">Job Summary</h6>
+        <div class="d-flex justify-content-between py-2 border-bottom small">
+          <span class="text-muted">Target Position</span>
+          <span class="fw-semibold">{{ application.job.title }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom small">
+          <span class="text-muted">Department</span>
+          <span class="fw-semibold">{{ application.job.department or 'General' }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom small">
+          <span class="text-muted">AI Match Score</span>
+          <span class="fw-bold text-primary">{{ application.match_score }}%</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 small">
+          <span class="text-muted">Application Date</span>
+          <span class="fw-semibold">{{ application.applied_at.strftime('%Y-%m-%d') }}</span>
+        </div>
+        {% if application.withdrawn_at %}
+          <div class="d-flex justify-content-between py-2 border-top small text-danger">
+            <span>Withdrawn Date</span>
+            <span>{{ application.withdrawn_at.strftime('%Y-%m-%d') }}</span>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

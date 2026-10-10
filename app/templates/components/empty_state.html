@@ -1,0 +1,14 @@
+{% macro render_empty_state(icon='bi-inbox', title='No items found', description='Get started by creating your first record.', action_url=None, action_text='Create New', action_icon='bi-plus-lg') %}
+<div class="empty-state">
+  <div class="empty-state-icon">
+    <i class="bi {{ icon }}"></i>
+  </div>
+  <h5 class="empty-state-title">{{ title }}</h5>
+  <p class="empty-state-description">{{ description }}</p>
+  {% if action_url %}
+  <a href="{{ action_url }}" class="btn btn-primary-enterprise">
+    <i class="bi {{ action_icon }} me-1"></i> {{ action_text }}
+  </a>
+  {% endif %}
+</div>
+{% endmacro %}

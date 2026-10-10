@@ -1,0 +1,65 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ candidate.user.full_name }} - Profile{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card-enterprise p-4 text-center">
+        <div class="stat-icon primary mx-auto mb-3" style="width: 72px; height: 72px; font-size: 2rem;">
+          <i class="bi bi-person"></i>
+        </div>
+        <h4 class="fw-bold mb-1">{{ candidate.user.full_name }}</h4>
+        <p class="text-muted small mb-3">{{ candidate.headline or 'Candidate' }}</p>
+        <span class="badge bg-light text-dark border mb-3"><i class="bi bi-envelope me-1"></i>{{ candidate.user.email }}</span>
+        
+        <div class="d-flex justify-content-center gap-2 mt-2">
+          {% if candidate.linkedin_url %}
+            <a href="{{ candidate.linkedin_url }}" target="_blank" class="btn btn-sm btn-outline-enterprise"><i class="bi bi-linkedin"></i></a>
+          {% endif %}
+          {% if candidate.github_url %}
+            <a href="{{ candidate.github_url }}" target="_blank" class="btn btn-sm btn-outline-enterprise"><i class="bi bi-github"></i></a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card-enterprise p-4">
+        <h5 class="fw-bold mb-3">Professional Summary</h5>
+        <p class="text-muted mb-4">{{ candidate.summary or 'No summary provided.' }}</p>
+
+        <h5 class="fw-bold mb-3">Skills</h5>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          {% if candidate.skills %}
+            {% for skill in candidate.skills.split(',') %}
+              <span class="badge bg-teal-subtle text-teal border px-3 py-2">{{ skill.strip() }}</span>
+            {% endfor %}
+          {% else %}
+            <span class="text-muted small">No skills tagged yet.</span>
+          {% endif %}
+        </div>
+
+        <h5 class="fw-bold mb-3">Submitted Resumes</h5>
+        {% if candidate.resumes.count() > 0 %}
+          <ul class="list-group list-group-flush">
+            {% for resume in candidate.resumes %}
+              <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                <div>
+                  <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                  <strong>{{ resume.original_filename }}</strong>
+                  <span class="text-muted small ms-2">({{ (resume.file_size / 1024)|round(1) }} KB)</span>
+                </div>
+                <span class="badge bg-success-subtle text-success">{{ resume.parsing_status }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted small mb-0">No resumes uploaded yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,229 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}Recruiter Dashboard - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <!-- Page Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <div>
+      <h3 class="fw-bold mb-1">Recruitment Overview</h3>
+      <p class="text-muted small mb-0">System performance metrics and real-time hiring pipeline statistics.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('jobs.create') }}" class="btn btn-primary-enterprise">
+        <i class="bi bi-plus-lg me-1"></i> Post New Job
+      </a>
+      <a href="{{ url_for('resumes.upload') }}" class="btn btn-outline-enterprise">
+        <i class="bi bi-upload me-1"></i> Upload Resumes
+      </a>
+    </div>
+  </div>
+
+  <!-- Metric / Stat Tiles (Accurate live database records, zero-invented) -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon primary">
+          <i class="bi bi-briefcase"></i>
+        </div>
+        <div>
+          <div class="stat-value">{{ total_jobs }}</div>
+          <div class="stat-label">Total Job Requisitions</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon teal">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div>
+          <div class="stat-value">{{ active_jobs }}</div>
+          <div class="stat-label">Active Openings</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon emerald">
+          <i class="bi bi-file-earmark-person"></i>
+        </div>
+        <div>
+          <div class="stat-value">{{ total_applications }}</div>
+          <div class="stat-label">Total Applications</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon amber">
+          <i class="bi bi-people"></i>
+        </div>
+        <div>
+          <div class="stat-value">{{ total_candidates }}</div>
+          <div class="stat-label">Candidate Profiles</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline Activity & Recent Records -->
+  <div class="row g-4 mb-4">
+    <!-- Recent Job Postings -->
+    <div class="col-lg-7">
+      <div class="card-enterprise h-100">
+        <div class="card-header-clean">
+          <div>
+            <h6 class="fw-semibold mb-0">Recent Job Requisitions</h6>
+            <span class="text-muted small">Latest requisitions posted to the portal</span>
+          </div>
+          <a href="{{ url_for('jobs.index') }}" class="btn btn-sm btn-outline-enterprise">View All</a>
+        </div>
+        <div class="p-0">
+          {% if recent_jobs %}
+            <div class="table-responsive">
+              <table class="table table-enterprise">
+                <thead>
+                  <tr>
+                    <th>Job Title</th>
+                    <th>Department</th>
+                    <th>Status</th>
+                    <th>Date Posted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for job in recent_jobs %}
+                  <tr>
+                    <td class="fw-semibold">
+                      <a href="{{ url_for('jobs.detail', job_id=job.id) }}" class="text-decoration-none text-dark">
+                        {{ job.title }}
+                      </a>
+                    </td>
+                    <td>{{ job.department }}</td>
+                    <td>
+                      <span class="badge-status {{ job.status }}">{{ job.status|capitalize }}</span>
+                    </td>
+                    <td class="text-muted small">{{ job.created_at.strftime('%b %d, %Y') }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="p-4">
+              {{ empty.render_empty_state(
+                icon='bi-briefcase',
+                title='No job requisitions created yet',
+                description='Post your first job opening to start accepting candidate submissions and triggering AI evaluations.',
+                action_url=url_for('jobs.create'),
+                action_text='Create First Job'
+              ) }}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Candidate Applications -->
+    <div class="col-lg-5">
+      <div class="card-enterprise h-100">
+        <div class="card-header-clean">
+          <div>
+            <h6 class="fw-semibold mb-0">Applicant Submissions</h6>
+            <span class="text-muted small">Latest incoming resumes &amp; applications</span>
+          </div>
+          <a href="{{ url_for('applications.index') }}" class="btn btn-sm btn-outline-enterprise">View All</a>
+        </div>
+        <div class="p-0">
+          {% if recent_applications %}
+            <div class="table-responsive">
+              <table class="table table-enterprise">
+                <thead>
+                  <tr>
+                    <th>Candidate</th>
+                    <th>Stage</th>
+                    <th>Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for app in recent_applications %}
+                  <tr>
+                    <td>{{ app.candidate.user.full_name if app.candidate and app.candidate.user else 'Anonymous' }}</td>
+                    <td><span class="badge-status pending">{{ app.stage|capitalize }}</span></td>
+                    <td class="fw-bold text-primary">{{ app.match_score }}%</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="p-4">
+              {{ empty.render_empty_state(
+                icon='bi-file-earmark-person',
+                title='No active applications received',
+                description='Once candidate profiles and resumes are submitted, they will appear here with AI scoring breakdowns.',
+                action_url=url_for('jobs.index'),
+                action_text='View Open Jobs',
+                action_icon='bi-arrow-right'
+              ) }}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational Quick Links -->
+  <div class="card-enterprise p-4">
+    <h6 class="fw-semibold mb-3">Module Routing &amp; Verification Matrix</h6>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <a href="{{ url_for('matching.index') }}" class="text-decoration-none">
+          <div class="p-3 border rounded bg-light hover-shadow text-dark">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <i class="bi bi-stars text-primary"></i>
+              <span class="fw-semibold">AI Match Engine</span>
+            </div>
+            <p class="text-muted small mb-0">Evaluate candidates against job skills criteria</p>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3">
+        <a href="{{ url_for('interviews.index') }}" class="text-decoration-none">
+          <div class="p-3 border rounded bg-light hover-shadow text-dark">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <i class="bi bi-calendar-event text-teal"></i>
+              <span class="fw-semibold">Interview Management</span>
+            </div>
+            <p class="text-muted small mb-0">Track schedule, links, and interviewer feedback</p>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3">
+        <a href="{{ url_for('reports.index') }}" class="text-decoration-none">
+          <div class="p-3 border rounded bg-light hover-shadow text-dark">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <i class="bi bi-bar-chart-line text-emerald"></i>
+              <span class="fw-semibold">Analytics &amp; Reports</span>
+            </div>
+            <p class="text-muted small mb-0">Pipeline conversion and hiring timeframes</p>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-3">
+        <a href="{{ url_for('admin.index') }}" class="text-decoration-none">
+          <div class="p-3 border rounded bg-light hover-shadow text-dark">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <i class="bi bi-shield-lock text-warning"></i>
+              <span class="fw-semibold">Administration</span>
+            </div>
+            <p class="text-muted small mb-0">User roles, access control, and audit logs</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends "layouts/base.html" %}
+{% import "components/empty_state.html" as empty %}
+
+{% block title %}Recruiter Dashboard - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <!-- Page Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <h3 class="fw-bold mb-0">{{ organization.name if organization else 'Recruiter Workspace' }}</h3>
+        {% if organization and not organization.is_verified %}
+          <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+            <i class="bi bi-shield-exclamation me-1"></i>Unverified Workspace
+          </span>
+        {% elif organization and organization.is_verified %}
+          <span class="badge bg-success-subtle text-success">
+            <i class="bi bi-shield-check me-1"></i>Verified Workspace
+          </span>
+        {% endif %}
+      </div>
+      <p class="text-muted small mb-0">Logged in as {{ current_user.full_name }} ({{ membership.membership_role|capitalize if membership else 'Recruiter' }})</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('recruiters.profile') }}" class="btn btn-outline-enterprise">
+        <i class="bi bi-person-gear me-1"></i> My Profile
+      </a>
+      {% if organization %}
+        <a href="{{ url_for('recruiters.organization_settings', org_id=organization.id) }}" class="btn btn-outline-enterprise">
+          <i class="bi bi-building me-1"></i> Organization
+        </a>
+      {% endif %}
+      <a href="{{ url_for('jobs.create') }}" class="btn btn-primary-enterprise">
+        <i class="bi bi-plus-lg me-1"></i> Post New Job
+      </a>
+    </div>
+  </div>
+
+  <!-- Metric / Stat Tiles -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon primary">
+          <i class="bi bi-briefcase"></i>
+        </div>
+        <div>
+          <div class="stat-value">{{ jobs|length }}</div>
+          <div class="stat-label">Organization Jobs</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon teal">
+          <i class="bi bi-people"></i>
+        </div>
+        <div>
+          <div class="stat-value">{{ applications|length }}</div>
+          <div class="stat-label">Candidate Submissions</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon amber">
+          <i class="bi bi-stars"></i>
+        </div>
+        <div>
+          <div class="stat-value">Ready</div>
+          <div class="stat-label">AI Ranking Engine</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon emerald">
+          <i class="bi bi-shield-check"></i>
+        </div>
+        <div>
+          <div class="stat-value">Active</div>
+          <div class="stat-label">Access State</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Job Requisitions Table -->
+  <div class="card-enterprise mb-4">
+    <div class="card-header-clean">
+      <div>
+        <h6 class="fw-semibold mb-0">Organization Job Postings</h6>
+        <span class="text-muted small">Managed within {{ organization.name if organization else 'your workspace' }}</span>
+      </div>
+      <a href="{{ url_for('jobs.create') }}" class="btn btn-sm btn-primary-enterprise">New Job</a>
+    </div>
+    <div class="p-0">
+      {% if jobs %}
+        <div class="table-responsive">
+          <table class="table table-enterprise">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Department</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for job in jobs %}
+              <tr>
+                <td class="fw-semibold">{{ job.title }}</td>
+                <td>{{ job.department }}</td>
+                <td>{{ job.location }}</td>
+                <td><span class="badge-status {{ job.status }}">{{ job.status|capitalize }}</span></td>
+                <td class="text-muted small">{{ job.created_at.strftime('%Y-%m-%d') }}</td>
+                <td>
+                  <a href="{{ url_for('jobs.detail', job_id=job.id) }}" class="btn btn-sm btn-outline-enterprise">View</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="p-4">
+          {{ empty.render_empty_state(
+            icon='bi-briefcase',
+            title='No organization job postings yet',
+            description='Post your first job opening to start receiving and screening candidate applications.',
+            action_url=url_for('jobs.create'),
+            action_text='Create Job Posting'
+          ) }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

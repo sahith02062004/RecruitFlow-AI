@@ -1,0 +1,112 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Schedule Interview - RecruitFlow AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4" style="max-width: 900px;">
+  <div class="mb-4 pb-2 border-bottom">
+    <a href="{{ url_for('applications.detail', application_id=application.id) }}" class="text-decoration-none small text-muted mb-2 d-inline-block">
+      <i class="bi bi-arrow-left me-1"></i>Back to Application
+    </a>
+    <h3 class="fw-bold mb-1">Schedule Interview Round</h3>
+    <p class="text-muted small mb-0">Coordinate an evaluation session with candidate and assign hiring team members.</p>
+  </div>
+
+  <!-- Candidate Context Card -->
+  <div class="card-enterprise p-3 mb-4 bg-light">
+    <div class="row align-items-center g-3">
+      <div class="col-sm-8">
+        <h6 class="fw-bold mb-1">{{ application.candidate_user.full_name }}</h6>
+        <div class="small text-muted">
+          <span><i class="bi bi-briefcase me-1"></i>{{ job.title }}</span>
+          <span class="mx-2">&bull;</span>
+          <span><i class="bi bi-envelope me-1"></i>{{ application.candidate_user.email }}</span>
+        </div>
+      </div>
+      <div class="col-sm-4 text-sm-end">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+          Current Stage: {{ application.status.replace('_', ' ')|capitalize }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scheduling Form Card -->
+  <div class="card-enterprise p-4">
+    <form method="POST" action="{{ url_for('interviews.schedule', application_id=application.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-7">
+          <label class="form-label fw-semibold small">{{ form.round_name.label.text }} <span class="text-danger">*</span></label>
+          {{ form.round_name(class="form-control" + (" is-invalid" if form.round_name.errors else ""), placeholder="e.g. Technical Screen 1, System Design, HR Cultural Fit") }}
+          {% for err in form.round_name.errors %}
+            <div class="invalid-feedback">{{ err }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-md-5">
+          <label class="form-label fw-semibold small">{{ form.interview_type.label.text }} <span class="text-danger">*</span></label>
+          {{ form.interview_type(class="form-select", id="interviewTypeSelect") }}
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold small">{{ form.scheduled_at.label.text }} <span class="text-danger">*</span></label>
+          {{ form.scheduled_at(class="form-control" + (" is-invalid" if form.scheduled_at.errors else ""), type="datetime-local") }}
+          {% for err in form.scheduled_at.errors %}
+            <div class="invalid-feedback">{{ err }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold small">{{ form.end_time.label.text }} <span class="text-danger">*</span></label>
+          {{ form.end_time(class="form-control" + (" is-invalid" if form.end_time.errors else ""), type="datetime-local") }}
+          {% for err in form.end_time.errors %}
+            <div class="invalid-feedback">{{ err }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold small">{{ form.timezone.label.text }} <span class="text-danger">*</span></label>
+          {{ form.timezone(class="form-select") }}
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-12" id="meetingLinkGroup">
+          <label class="form-label fw-semibold small">{{ form.meeting_link.label.text }}</label>
+          {{ form.meeting_link(class="form-control" + (" is-invalid" if form.meeting_link.errors else ""), placeholder="https://meet.google.com/xyz or https://zoom.us/j/123") }}
+          <div class="form-text small">Required for online video rounds. Must start with http:// or https://.</div>
+          {% for err in form.meeting_link.errors %}
+            <div class="invalid-feedback">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="col-12" id="locationGroup">
+          <label class="form-label fw-semibold small">{{ form.location.label.text }}</label>
+          {{ form.location(class="form-control" + (" is-invalid" if form.location.errors else ""), placeholder="e.g. Conference Room B, HQ 4th Floor, 100 Main St") }}
+          <div class="form-text small">Required for in-person onsite rounds.</div>
+          {% for err in form.location.errors %}
+            <div class="invalid-feedback">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold small">{{ form.interviewer_ids.label.text }}</label>
+        {{ form.interviewer_ids(class="form-select", size=4, multiple=True) }}
+        <div class="form-text small">Hold Ctrl (or Cmd) to select multiple team members. Only verified members of this organization are available.</div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold small">{{ form.instructions.label.text }}</label>
+        {{ form.instructions(class="form-control", rows=3, placeholder="Candidate preparation guidance, technical prerequisites, or coding environment notes.") }}
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{{ url_for('applications.detail', application_id=application.id) }}" class="btn btn-outline-secondary">Cancel</a>
+        {{ form.submit(class="btn btn-primary") }}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
